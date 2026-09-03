@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>From DETX to XLSX</title>
+    <title>From DETX to Infinity</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -126,15 +126,24 @@
         .container {
             position: relative;
             z-index: 1;
-            max-width: 1000px;
+            max-width: 1800px;
             margin: 0 auto;
-            padding: 60px 24px;
+            padding: 40px 24px;
+        }
+
+        /* Work surface: transcript on the left, export + preview on the
+           right. Single column until a file is loaded. */
+        .workspace {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 24px;
+            align-items: start;
         }
 
         /* Header */
         .header {
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 28px;
         }
 
         .logo {
@@ -157,13 +166,14 @@
         }
 
         .title {
-            font-size: 42px;
+            font-size: 30px;
             font-weight: 700;
             letter-spacing: -0.02em;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0;
+            /* flex trims the spaces inside the spans, so space the words here */
+            gap: 0.25em;
         }
 
         .title-static {
@@ -199,19 +209,43 @@
             animation-delay: 1.5s;
         }
 
+        /* The infinity mark: larger than the words, breathing slowly.
+           Two animations run together - the shared gradient shimmer and a
+           soft scale/glow - so the shorthand restates the shimmer delay. */
+        #titleFormat {
+            display: inline-block;
+            font-size: 1.9em;
+            line-height: 0.6;
+            /* No vertical nudge: align-items:center on .title already lines the
+               glyph ink up with the words - measured, not eyeballed. */
+            /* Static glow only. Animating drop-shadow re-blurs the glyph every
+               frame, which stutters on weaker GPUs. */
+            filter: drop-shadow(0 0 12px rgba(129, 140, 248, 0.35));
+            animation: shimmer 3s ease-in-out 1.5s infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .title-format {
+                animation: none;
+            }
+        }
+
         @keyframes shimmer {
             0%, 100% { background-position: 200% center; }
             50% { background-position: 0% center; }
         }
 
         .subtitle {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--text-muted);
             font-weight: 400;
         }
 
         /* Main card */
         .converter-card {
+            /* The card reflows on its own width, not the viewport's, so the
+               intake row stacks when the preview tab takes the page. */
+            container-type: inline-size;
             background: var(--bg-card);
             border: 1px solid var(--border-subtle);
             border-radius: 24px;
@@ -220,8 +254,50 @@
         }
 
         /* Drop zone */
+        /* Intake row: drop zone on the left, file + programme summary on
+           the right. Collapses to a single column until a file is loaded. */
+        .intake-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 20px;
+            align-items: stretch;
+        }
+
+        .intake-row.split {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .summary-col {
+            display: none;
+            flex-direction: column;
+            gap: 16px;
+            min-width: 0;
+        }
+
+        .summary-col.visible {
+            display: flex;
+        }
+
+        @container (max-width: 720px) {
+            .intake-row.split {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .program-info {
+                grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            }
+
+            .preview-table th,
+            .preview-table td {
+                padding: 8px 10px;
+            }
+        }
+
         .drop-zone {
             position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             border: 2px dashed var(--border-subtle);
             border-radius: 16px;
             padding: 48px;
@@ -254,6 +330,29 @@
         .drop-zone.has-file {
             border-color: var(--success);
             border-style: solid;
+        }
+
+        /* Once a file is loaded the drop zone is a big target for something
+           already done - shrink it so the transcript starts higher up. */
+        .drop-zone.has-file {
+            padding: 24px;
+        }
+
+        .drop-zone.has-file .drop-icon {
+            width: 44px;
+            height: 44px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+        }
+
+        .drop-zone.has-file .drop-icon svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .drop-zone.has-file .drop-text {
+            font-size: 16px;
+            margin-bottom: 4px;
         }
 
         .drop-zone-content {
@@ -312,7 +411,6 @@
             padding: 16px;
             background: var(--bg-elevated);
             border-radius: 12px;
-            margin-top: 16px;
         }
 
         .file-info.visible {
@@ -395,7 +493,8 @@
         /* Program section */
         .program-section {
             display: none;
-            margin-top: 24px;
+            flex: 1;
+            min-width: 0;
         }
 
         .program-section.visible {
@@ -417,9 +516,59 @@
             letter-spacing: 0.05em;
         }
 
+        .program-body {
+            display: flex;
+            align-items: stretch;
+            gap: 14px;
+        }
+
+        .program-poster {
+            display: none;
+            flex: 0 0 auto;
+            width: 84px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-deep);
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .program-poster.visible {
+            display: block;
+        }
+
+        .program-poster:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .program-poster img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .program-match {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: right;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .program-match b {
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
         .program-info {
+            flex: 1;
+            min-width: 0;
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
             gap: 16px;
             padding: 16px;
             background: var(--bg-deep);
@@ -487,7 +636,9 @@
             background: var(--bg-deep);
             border: 1px solid var(--border-subtle);
             border-radius: 12px;
-            max-height: 140px;
+            /* Three rows of chips: 3 x 30px chip + 2 x 8px gap + 32px padding
+               = 138px, plus a sliver so a fourth row peeks when there is more. */
+            max-height: 150px;
             overflow-y: auto;
             scrollbar-width: thin;
             scrollbar-color: var(--accent-primary) var(--bg-elevated);
@@ -702,183 +853,679 @@
             text-align: center;
         }
 
-        /* Convert button */
-        .convert-section {
-            margin-top: 32px;
-            display: flex;
-            justify-content: center;
+        /* Right-hand panel: Export / Preview tabs */
+        .side-panel {
+            display: none;
+            flex-direction: column;
+            min-width: 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 24px 64px -12px rgba(0, 0, 0, 0.5);
         }
 
-        .convert-btn {
-            position: relative;
-            padding: 18px 48px;
-            font-family: 'Instrument Sans', sans-serif;
-            font-size: 16px;
+        .workspace.split .side-panel {
+            display: flex;
+        }
+
+        /* Export controls sit above a preview that is always live */
+        .panel-export {
+            flex: 0 0 auto;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 18px;
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-primary) var(--bg-elevated);
+        }
+
+        #paneExport::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #paneExport::-webkit-scrollbar-track {
+            background: var(--bg-elevated);
+            border-radius: 3px;
+        }
+
+        #paneExport::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 3px;
+        }
+
+        .panel-preview {
+            display: flex;
+            flex-direction: column;
+            flex: 1 1 auto;
+            min-height: 0;
+        }
+
+        .panel-preview-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .panel-preview-title {
+            font-size: 14px;
             font-weight: 600;
-            color: white;
-            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-subtle) 100%);
-            border: none;
-            border-radius: 14px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .panel-preview-format {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.18);
+            border-radius: 20px;
+            padding: 3px 9px;
+        }
+
+        /* Sits with the section title rather than banished to the far
+           right, where it read as chrome and got missed. */
+        .panel-pop {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 13px;
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid var(--border-active);
+            border-radius: 8px;
             cursor: pointer;
-            overflow: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 32px rgba(99, 102, 241, 0.3);
+            white-space: nowrap;
+            transition: all 0.18s ease;
+        }
+
+        .panel-pop svg {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
+        }
+
+        .panel-pop:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        /* The preview renders in an iframe so its stylesheet stays fully
+           isolated from the app's. */
+        .preview-frame {
+            flex: 1;
+            width: 100%;
+            min-height: 72vh;
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            background: var(--bg-deep);
+        }
+
+        .panel-empty {
+            display: none;
+            padding: 40px 16px;
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .panel-preview.is-empty .preview-frame {
             display: none;
         }
 
-        .convert-btn.visible {
+        .panel-preview.is-empty .panel-empty {
+            display: block;
+        }
+
+        /* Inside the panel the export block is always on show */
+        .side-panel .export-section {
+            margin-top: 0;
+        }
+
+        .side-panel .format-grid {
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        }
+
+        /* Export format section */
+        .export-section {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .export-section.visible {
+            display: block;
+        }
+
+        .export-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .export-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .export-hint {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .format-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .format-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            padding: 14px 16px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: left;
+            font-family: 'Instrument Sans', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .format-card:hover {
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.08);
+        }
+
+        .format-card.active {
+            border-color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.18);
+            box-shadow: 0 0 16px rgba(99, 102, 241, 0.25);
+        }
+
+        .format-ext {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.02em;
+        }
+
+        .format-card.active .format-ext {
+            color: var(--accent-glow);
+        }
+
+        .format-desc {
+            font-size: 11px;
+            color: var(--text-muted);
+            line-height: 1.3;
+        }
+
+        /* Format options */
+        .format-options {
+            display: none;
+            flex-wrap: wrap;
+            gap: 18px;
+            align-items: flex-end;
+            margin-top: 12px;
+            padding: 14px 16px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+        }
+
+        .format-options.visible {
+            display: flex;
+        }
+
+        .opt {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .opt.visible {
+            display: flex;
+        }
+
+        .opt-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .opt select,
+        .opt input[type="text"] {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 8px 10px;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+
+        .opt select:focus,
+        .opt input[type="text"]:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .opt input[type="text"] {
+            width: 90px;
+        }
+
+        .opt-hint {
+            display: none;
+            margin-left: 7px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 500;
+            text-transform: none;
+            letter-spacing: 0;
+            color: var(--success-glow);
+        }
+
+        .opt-hint.visible {
+            display: inline;
+        }
+
+        .opt-hint.warn {
+            color: var(--text-muted);
+        }
+
+        .opt-check {
+            flex-direction: row;
+            align-items: center;
+            gap: 8px;
+            padding-bottom: 9px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .opt-check.visible {
+            display: flex;
+        }
+
+        .opt-check input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        .opt-check .opt-label {
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        /* Preview (secondary) button */
+        .preview-btn {
+            display: none;
+            align-items: center;
+            gap: 10px;
+            padding: 18px 28px;
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-primary);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-active);
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .preview-btn.visible {
             display: inline-flex;
+        }
+
+        .preview-btn:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.15);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.2);
+        }
+
+        .preview-btn:active {
+            transform: translateY(0);
+        }
+
+        .preview-btn svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        /* Roles toolbar */
+        .roles-tools {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .roles-btn {
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--bg-elevated);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 5px 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .roles-btn:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+            background: rgba(99, 102, 241, 0.12);
+        }
+
+        .role-count {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1px 6px;
+            min-width: 20px;
+            text-align: center;
+        }
+
+        .role-tag.active .role-count {
+            color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .role-tag.dimmed {
+            opacity: 0.28;
+        }
+
+        .role-tag.dimmed:hover {
+            opacity: 0.6;
+        }
+
+        /* Search */
+        .search-section {
+            display: none;
+            margin-top: 24px;
+        }
+
+        .search-section.visible {
+            display: block;
+        }
+
+        .search-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .search-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .search-row {
+            display: flex;
             align-items: center;
             gap: 12px;
         }
 
-        .convert-btn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 40px rgba(99, 102, 241, 0.4);
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            flex: 1;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        .convert-btn:active:not(:disabled) {
-            transform: translateY(0);
+        .search-box:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
         }
 
-        .convert-btn:disabled {
-            cursor: not-allowed;
-            opacity: 0.7;
-        }
-
-        .convert-btn::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transform: translateX(-100%);
-            transition: transform 0.5s ease;
-        }
-
-        .convert-btn:hover:not(:disabled)::before {
-            transform: translateX(100%);
-        }
-
-        .btn-icon {
-            width: 20px;
-            height: 20px;
-            transition: transform 0.3s ease;
-        }
-
-        .convert-btn:hover .btn-icon {
-            transform: rotate(90deg);
-        }
-
-        /* Processing state */
-        .convert-btn.processing {
-            pointer-events: none;
-        }
-
-        .convert-btn.processing .btn-text {
-            opacity: 0;
-        }
-
-        .spinner {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            margin-left: -12px;
-            margin-top: -12px;
-            width: 24px;
-            height: 24px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-top-color: white;
-            border-radius: 50%;
-            opacity: 0;
-            animation: none;
-        }
-
-        .convert-btn.processing .spinner {
-            opacity: 1;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Success state */
-        .convert-btn.success {
-            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
-            box-shadow: 0 8px 32px rgba(16, 185, 129, 0.3);
-        }
-
-        .success-check {
-            width: 24px;
-            height: 24px;
-            opacity: 0;
-            transform: scale(0);
+        .search-box svg {
+            width: 16px;
+            height: 16px;
+            margin-left: 12px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 2;
             flex-shrink: 0;
         }
 
-        .convert-btn.success .success-check {
-            opacity: 1;
-            transform: scale(1);
-            animation: popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        .search-box input {
+            flex: 1;
+            min-width: 0;
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 14px;
+            color: var(--text-primary);
+            background: transparent;
+            border: none;
+            outline: none;
+            padding: 10px 12px;
         }
 
-        .convert-btn.success .btn-text,
-        .convert-btn.success .btn-icon {
+        .search-box input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-box input::-webkit-search-cancel-button {
             display: none;
         }
 
-        .success-text {
-            opacity: 0;
+        .search-clear {
             display: none;
-        }
-
-        .convert-btn.success .success-text {
-            display: inline;
-            opacity: 0;
-            animation: fadeIn 0.3s ease 0.2s forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        @keyframes popIn {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
-        }
-
-        /* Particles effect */
-        .particles {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            overflow: hidden;
-            border-radius: 14px;
-        }
-
-        .particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: white;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            margin-right: 10px;
+            font-size: 16px;
+            line-height: 1;
+            color: var(--text-muted);
+            background: var(--bg-elevated);
+            border: none;
             border-radius: 50%;
-            opacity: 0;
+            cursor: pointer;
+            transition: all 0.15s ease;
         }
 
-        .convert-btn.success .particle {
-            animation: particleExplode 0.6s ease-out forwards;
+        .search-clear.visible {
+            display: flex;
         }
 
-        @keyframes particleExplode {
-            0% {
-                opacity: 1;
-                transform: translate(0, 0) scale(1);
-            }
-            100% {
-                opacity: 0;
-                transform: translate(var(--tx), var(--ty)) scale(0);
-            }
+        .search-clear:hover {
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.25);
+        }
+
+        .search-count {
+            display: none;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--success-glow);
+            white-space: nowrap;
+        }
+
+        .search-count.visible {
+            display: inline;
+        }
+
+        .search-count.empty {
+            color: var(--text-muted);
+        }
+
+        .preview-table mark {
+            background: rgba(52, 211, 153, 0.28);
+            color: var(--success-glow);
+            border-radius: 3px;
+            padding: 0 2px;
+        }
+
+        /* Export scope */
+        .export-scope {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 10px;
+        }
+
+        .scope-pill {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-glow);
+            background: rgba(99, 102, 241, 0.2);
+            border-radius: 20px;
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+
+        .scope-pill.scope-all {
+            color: var(--success-glow);
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .scope-detail {
+            font-size: 12px;
+            color: var(--text-muted);
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Changelog */
+        .changelog {
+            max-width: 1000px;
+            margin: 16px auto 0;
+            text-align: left;
+        }
+
+        .changelog-summary {
+            /* flex + fit-content + auto margins centres the chip regardless of
+               the left-aligned text inside the panel it opens */
+            display: flex;
+            width: fit-content;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            cursor: pointer;
+            list-style: none;
+            transition: all 0.18s ease;
+        }
+
+        .changelog-summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .changelog-summary::before {
+            content: '\25b8';
+            color: var(--accent-glow);
+            transition: transform 0.18s ease;
+        }
+
+        .changelog[open] .changelog-summary::before {
+            transform: rotate(90deg);
+        }
+
+        .changelog-summary:hover {
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .changelog-wrap {
+            text-align: center;
+        }
+
+        .changelog-body {
+            margin-top: 18px;
+            padding: 20px 22px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+        }
+
+        .changelog-intro {
+            font-size: 12.5px;
+            line-height: 1.6;
+            color: var(--text-muted);
+            margin-bottom: 18px;
+        }
+
+        .changelog-list {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+            gap: 9px 28px;
+        }
+
+        .changelog-list li {
+            position: relative;
+            padding-left: 15px;
+            font-size: 12.5px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+        }
+
+        .changelog-list li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 7px;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: var(--border-active);
+        }
+
+        .changelog-list strong {
+            color: var(--text-primary);
+            font-weight: 600;
         }
 
         /* Footer */
@@ -893,6 +1540,20 @@
             font-size: 13px;
             color: var(--text-muted);
             margin-bottom: 16px;
+        }
+
+        .footer-tmdb {
+            font-size: 11px;
+            opacity: 0.75;
+        }
+
+        .footer-tmdb a {
+            color: var(--accent-glow);
+            text-decoration: none;
+        }
+
+        .footer-tmdb a:hover {
+            text-decoration: underline;
         }
 
         .footer-logo {
@@ -913,7 +1574,7 @@
             }
 
             .title {
-                font-size: 28px;
+                font-size: 24px;
             }
 
             .converter-card {
@@ -928,6 +1589,28 @@
             .preview-table td {
                 padding: 8px 12px;
             }
+
+            .format-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .side-panel {
+                max-height: none;
+            }
+
+            .intake-row.split {
+                grid-template-columns: minmax(0, 1fr);
+            }
+
+            .search-row {
+                flex-wrap: wrap;
+            }
+
+            .roles-header {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
         }
     </style>
 </head>
@@ -940,16 +1623,37 @@
 
     <div class="container">
         <header class="header">
-            <div class="logo">
-                <div class="logo-icon">⚡</div>
-            </div>
             <h1 class="title">
-                <span class="title-static">From </span><span class="title-format title-detx">DETX</span><span class="title-static"> to </span><span class="title-format title-xlsx">XLSX</span>
+                <span class="title-static">From </span><span class="title-format title-detx">DETX</span><span class="title-static"> to </span><span class="title-format title-xlsx" id="titleFormat">∞</span>
             </h1>
-            <p class="subtitle">Transform your DETX transcript files into Excel spreadsheets</p>
+            <p class="subtitle">Turn a DETX transcript into Excel, dubbing scripts or subtitles — whole show or role by role</p>
+
+        <div class="changelog-wrap">
+            <details class="changelog">
+                <summary class="changelog-summary">What changed since the first version</summary>
+                <div class="changelog-body">
+                    <p class="changelog-intro">
+                        The first version converted a DETX into an Excel workbook. Since then:
+                    </p>
+                    <ul class="changelog-list">
+                        <li>Exports to <strong>Excel, RTF, Word, SRT and TTML</strong> &mdash; TTML in an EZTitle or a Youdub profile</li>
+                        <li>New <strong>Cast</strong> sheet in the workbook: each role, a blank column for the actor, and its line count</li>
+                        <li>Workbook columns reordered to TC in, TC out, Character, Original, Translated</li>
+                        <li>Pick one or more roles and export only their lines, in any format &mdash; Excel can also give each role its own sheet</li>
+                        <li>Search the transcript for a word or a name; roles who never say it are dimmed, so you can see who does</li>
+                        <li>Live preview of the export beside the transcript, updating as you change format, roles or options</li>
+                        <li>Frame rate read from the file's timecodes when you load it</li>
+                        <li>Role sex written as F / M / N in the dubbing scripts</li>
+                    <li>Programme poster and title looked up from the filename when you drop a file</li>
+                    </ul>
+                </div>
+            </details>
+            </div>
         </header>
 
+        <div class="workspace" id="workspace">
         <div class="converter-card">
+            <div class="intake-row" id="intakeRow">
             <div class="drop-zone" id="dropZone">
                 <div class="drop-zone-content">
                     <div class="drop-icon">
@@ -965,6 +1669,7 @@
                 <input type="file" id="fileInput" class="file-input" accept=".detx">
             </div>
 
+            <div class="summary-col" id="summaryCol">
             <div class="file-info" id="fileInfo">
                 <div class="file-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -990,7 +1695,12 @@
             <div class="program-section" id="programSection">
                 <div class="program-header">
                     <span class="program-title">Program</span>
+                    <span class="program-match" id="programMatch"></span>
                 </div>
+                <div class="program-body">
+                <a class="program-poster" id="programPoster" target="_blank" rel="noopener noreferrer">
+                    <img id="programPosterImg" alt="" />
+                </a>
                 <div class="program-info">
                     <div class="program-item">
                         <span class="program-label">Programme Name</span>
@@ -1005,18 +1715,43 @@
                         <span class="program-value" id="programTitle">—</span>
                     </div>
                 </div>
+                </div>
+            </div>
+            </div>
             </div>
 
             <div class="roles-section" id="rolesSection">
                 <div class="roles-header">
                     <span class="roles-title">Roles</span>
-                    <span class="roles-count" id="rolesCount">0 characters</span>
+                    <div class="roles-tools">
+                        <span class="roles-count" id="rolesCount">0 characters</span>
+                        <button class="roles-btn" id="rolesSelectAll" type="button">Select all</button>
+                        <button class="roles-btn" id="rolesClear" type="button">Clear</button>
+                    </div>
                 </div>
                 <div class="roles-list" id="rolesList">
                 </div>
                 <div class="filter-indicator" id="filterIndicator">
-                    <span class="filter-label">Filtering by: <span class="filter-value" id="filterValue"></span></span>
-                    <button class="filter-clear" id="filterClear">Clear filter</button>
+                    <span class="filter-label">Exporting only: <span class="filter-value" id="filterValue"></span></span>
+                    <button class="filter-clear" id="filterClear">Clear selection</button>
+                </div>
+            </div>
+
+            <div class="search-section" id="searchSection">
+                <div class="search-header">
+                    <span class="search-title">Search</span>
+                    <span class="search-count" id="searchCount"></span>
+                </div>
+                <div class="search-row">
+                    <div class="search-box">
+                        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="11" cy="11" r="7"/>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                        </svg>
+                        <input type="search" id="searchInput" spellcheck="false"
+                               placeholder="Search a name, a word, a role…">
+                        <button class="search-clear" id="searchClear" type="button" title="Clear search">&times;</button>
+                    </div>
                 </div>
             </div>
 
@@ -1033,10 +1768,10 @@
                         <thead>
                             <tr>
                                 <th>TC In</th>
+                                <th>TC Out</th>
                                 <th>Character</th>
                                 <th>Text</th>
                                 <th>Track</th>
-                                <th>TC Out</th>
                             </tr>
                         </thead>
                         <tbody id="previewBody">
@@ -1044,28 +1779,107 @@
                     </table>
                 </div>
             </div>
+        </div>
 
-            <div class="convert-section">
-                <button class="convert-btn" id="convertBtn">
-                    <div class="particles" id="particles"></div>
-                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="16 16 12 12 8 16"/>
-                        <line x1="12" y1="12" x2="12" y2="21"/>
-                        <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
-                        <polyline points="16 16 12 12 8 16"/>
-                    </svg>
-                    <span class="btn-text">Convert to XLSX</span>
-                    <div class="spinner"></div>
-                    <svg class="success-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="20 6 9 17 4 12"/>
-                    </svg>
-                    <span class="success-text">Downloaded!</span>
-                </button>
+        <aside class="side-panel" id="sidePanel">
+            <div class="panel-export" id="paneExport">
+            <div class="export-section" id="exportSection">
+                <div class="export-header">
+                    <span class="export-title">Export format</span>
+                    <span class="export-hint" id="exportHint">Excel workbook</span>
+                </div>
+                <div class="format-grid" id="formatGrid">
+                    <button class="format-card active" data-format="xlsx" type="button">
+                        <span class="format-ext">XLSX</span>
+                        <span class="format-desc">Excel workbook for translation</span>
+                    </button>
+                    <button class="format-card" data-format="rtf" type="button">
+                        <span class="format-ext">RTF</span>
+                        <span class="format-desc">Voice-over / dubbing script</span>
+                    </button>
+                    <button class="format-card" data-format="doc" type="button">
+                        <span class="format-ext">DOC</span>
+                        <span class="format-desc">Word document script</span>
+                    </button>
+                    <button class="format-card" data-format="ttml-ez" type="button">
+                        <span class="format-ext">TTML EZ</span>
+                        <span class="format-desc">EZTitle, SMPTE timecodes</span>
+                    </button>
+                    <button class="format-card" data-format="ttml-yd" type="button">
+                        <span class="format-ext">TTML YD</span>
+                        <span class="format-desc">Youdub, SMPTE + speaker agents</span>
+                    </button>
+                    <button class="format-card" data-format="srt" type="button">
+                        <span class="format-ext">SRT</span>
+                        <span class="format-desc">SubRip subtitles</span>
+                    </button>
+                </div>
+                <div class="export-scope" id="exportScope"></div>
+                <div class="format-options" id="formatOptions">
+                    <div class="opt" id="optFps">
+                        <label class="opt-label" for="fpsSelect">Frame rate<span class="opt-hint" id="fpsHint"></span></label>
+                        <select id="fpsSelect">
+                            <option value="23.976">23.976 fps</option>
+                            <option value="24" selected>24 fps</option>
+                            <option value="25">25 fps</option>
+                            <option value="29.97">29.97 fps (NDF)</option>
+                            <option value="29.97df">29.97 fps (DF)</option>
+                            <option value="30">30 fps</option>
+                        </select>
+                    </div>
+                    <div class="opt" id="optOffset">
+                        <label class="opt-label" for="offsetSelect">Zero point</label>
+                        <select id="offsetSelect">
+                            <option value="auto" selected>Auto (first hour)</option>
+                            <option value="none">Keep source TC</option>
+                            <option value="01:00:00:00">01:00:00:00</option>
+                            <option value="10:00:00:00">10:00:00:00</option>
+                        </select>
+                    </div>
+                    <div class="opt" id="optLang">
+                        <label class="opt-label" for="langInput">Language</label>
+                        <input type="text" id="langInput" value="fr" maxlength="8" spellcheck="false">
+                    </div>
+                    <div class="opt" id="optSheets">
+                        <label class="opt-label" for="sheetsSelect">Sheet layout</label>
+                        <select id="sheetsSelect">
+                            <option value="single" selected>Single sheet</option>
+                            <option value="perrole">One sheet per role</option>
+                        </select>
+                    </div>
+                    <label class="opt opt-check" id="optNames">
+                        <input type="checkbox" id="namesCheck">
+                        <span class="opt-label">Prefix character names</span>
+                    </label>
+                </div>
             </div>
+
+            </div>
+
+            <div class="panel-preview" id="panePreview">
+                <div class="panel-preview-header">
+                    <span class="panel-preview-title">Live preview</span>
+                    <span class="panel-preview-format" id="previewFormatLabel">XLSX</span>
+                    <button class="panel-pop" id="panelPopOut" type="button" title="Open this preview in a new browser tab">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        <span>Open in a tab</span>
+                    </button>
+                </div>
+                <iframe class="preview-frame" id="previewFrame" title="Export preview"></iframe>
+                <p class="panel-empty" id="panelEmpty">Load a DETX file to see a preview.</p>
+            </div>
+        </aside>
         </div>
 
         <footer class="footer">
-            <p class="footer-text" id="footerText">Supports CharactR / Cappella DETX files • Exports as Excel XLSX</p>
+            <p class="footer-text" id="footerText">Supports CharactR / Cappella DETX files • Exports XLSX, RTF, DOC, TTML &amp; SRT</p>
+            <p class="footer-text footer-tmdb">Posters from
+                <a href="https://www.themoviedb.org/" target="_blank" rel="noopener noreferrer">TMDB</a>.
+                This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
             <a href="https://media.transperfect.com/" target="_blank" rel="noopener noreferrer">
                 <img src="data:image/png;base64,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" alt="TransPerfect Media" class="footer-logo" />
             </a>
@@ -1076,7 +1890,8 @@
         // State
         let parsedData = null;
         let currentFileName = '';
-        let currentFilter = null;
+        let selectedRoles = new Set();   // empty = every role
+        let searchTerm = '';
 
         // DOM Elements
         const dropZone = document.getElementById('dropZone');
@@ -1089,8 +1904,12 @@
         const previewBody = document.getElementById('previewBody');
         const lineCount = document.getElementById('lineCount');
         const charCount = document.getElementById('charCount');
-        const convertBtn = document.getElementById('convertBtn');
-        const particles = document.getElementById('particles');
+        const exportSection = document.getElementById('exportSection');
+        const workspace = document.getElementById('workspace');
+        const sidePanel = document.getElementById('sidePanel');
+        const intakeRow = document.getElementById('intakeRow');
+        const summaryCol = document.getElementById('summaryCol');
+        const searchSection = document.getElementById('searchSection');
 
         // File size formatter
         function formatFileSize(bytes) {
@@ -1121,6 +1940,7 @@
             const result = {
                 roles: {},
                 roleColors: {},
+                roleMeta: {},
                 lines: [],
                 metadata: {
                     title: '',
@@ -1143,6 +1963,25 @@
                 result.metadata.generator = (name || 'CharactR') + (ver ? ' v' + ver : '');
             }
 
+            // Best-effort programme metadata: DETX dialects store these either as
+            // element text or as a value/name attribute, so try both and fall back
+            // to the filename downstream.
+            const readMeta = (tag) => {
+                const el = xmlDoc.querySelector('head ' + tag) ||
+                           xmlDoc.querySelector('metadata ' + tag) ||
+                           xmlDoc.querySelector(tag);
+                if (!el) return '';
+                const text = (el.textContent || '').trim();
+                return text || el.getAttribute('value') || el.getAttribute('name') || '';
+            };
+            ['title', 'episode', 'author', 'summary'].forEach(key => {
+                try {
+                    result.metadata[key] = readMeta(key);
+                } catch (e) {
+                    result.metadata[key] = '';
+                }
+            });
+
             // Parse roles
             // Cappella: IDs are simple (femme_1) → display as Femme_1
             // CharactR: IDs are UUIDs → use the name attribute as-is
@@ -1154,6 +1993,10 @@
                 const displayName = isUUID(id) ? name : titleCaseRoleId(id);
                 result.roles[id] = displayName;
                 result.roleColors[displayName] = color;
+                result.roleMeta[id] = {
+                    gender: role.getAttribute('gender') || role.getAttribute('sex') || '',
+                    description: role.getAttribute('description') || role.getAttribute('comment') || ''
+                };
             });
 
             // Parse lines
@@ -1189,6 +2032,7 @@
                 const characterName = roleName || result.roles[roleId] || roleId || '';
 
                 result.lines.push({
+                    id: line.getAttribute('id') || '',
                     tcIn: tcIn,
                     type: 'line',
                     character: characterName,
@@ -1202,36 +2046,138 @@
             return result;
         }
 
-        // Generate preview
-        function generatePreview(data, filterCharacter = null) {
-            previewBody.innerHTML = '';
-            
-            let linesToShow = data.lines;
-            
-            // Apply filter if set
-            if (filterCharacter) {
-                linesToShow = data.lines.filter(line => line.character === filterCharacter);
-            }
-            
-            const previewLines = linesToShow.slice(0, 100); // Show first 100 lines
-            previewLines.forEach(line => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td class="col-tc">${line.tcIn}</td>
-                    <td class="col-char">${line.character}</td>
-                    <td class="col-text">${line.original}</td>
-                    <td class="col-track">${line.track}</td>
-                    <td class="col-tc">${line.tcOut}</td>
-                `;
-                previewBody.appendChild(tr);
-            });
+        // ============================================================
+        // Role selection + text search
+        // ============================================================
+        // Accent-insensitive folding so "prenom" finds "prénom"
+        function foldForSearch(str) {
+            return String(str == null ? '' : str)
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+        }
 
-            // Update stats
-            lineCount.textContent = filterCharacter 
-                ? `${linesToShow.length} / ${data.lines.length}` 
-                : data.lines.length;
-            const uniqueChars = new Set(data.lines.map(l => l.character));
-            charCount.textContent = uniqueChars.size;
+        // Folded copy of a string plus a map back to the original indices
+        function foldWithMap(str) {
+            let folded = '';
+            const map = [];
+            for (let i = 0; i < str.length; i++) {
+                const piece = foldForSearch(str[i]);
+                for (let k = 0; k < piece.length; k++) map.push(i);
+                folded += piece;
+            }
+            map.push(str.length);
+            return { folded, map };
+        }
+
+        function lineMatchesSearch(line, term) {
+            if (!term) return true;
+            const folded = foldForSearch(term);
+            return foldForSearch(line.original).includes(folded) ||
+                   foldForSearch(line.character).includes(folded);
+        }
+
+        // Escape to HTML, wrapping every match of `term` in <mark>
+        function highlightMatches(text, term) {
+            const raw = String(text == null ? '' : text);
+            const folded = foldForSearch(term);
+            if (!folded) return escapeHtml(raw);
+
+            const { folded: haystack, map } = foldWithMap(raw);
+            let out = '';
+            let last = 0;
+            let at = haystack.indexOf(folded);
+
+            while (at !== -1) {
+                const start = map[at];
+                const stop = map[Math.min(at + folded.length, map.length - 1)];
+                out += escapeHtml(raw.slice(last, start)) +
+                       '<mark>' + escapeHtml(raw.slice(start, stop)) + '</mark>';
+                last = stop;
+                at = haystack.indexOf(folded, at + folded.length);
+            }
+
+            return out + escapeHtml(raw.slice(last));
+        }
+
+        // Every character name that appears, declared roles first
+        function allRoleNames(data) {
+            const names = Object.values(data.roles).slice();
+            data.lines.forEach(line => {
+                if (line.character && !names.includes(line.character)) names.push(line.character);
+            });
+            return names;
+        }
+
+        // Spoken-line count per role (the "lignage" of a dubbing script)
+        function roleLineCounts(data) {
+            const counts = new Map();
+            allRoleNames(data).forEach(name => counts.set(name, 0));
+            data.lines.forEach(line => {
+                if (!line.character || !(line.original || '').trim()) return;
+                counts.set(line.character, (counts.get(line.character) || 0) + 1);
+            });
+            return counts;
+        }
+
+        // Roles included in an export: the selection, or everything when empty
+        function scopedRoleNames(data) {
+            const names = allRoleNames(data);
+            if (selectedRoles.size === 0) return names;
+            return names.filter(name => selectedRoles.has(name));
+        }
+
+        function isRoleInScope(name) {
+            return selectedRoles.size === 0 || selectedRoles.has(name);
+        }
+
+        // Lines included in an export (role selection only - the text search
+        // is a reading aid and never narrows what gets written out)
+        function scopedLines(data) {
+            if (selectedRoles.size === 0) return data.lines;
+            return data.lines.filter(line => selectedRoles.has(line.character));
+        }
+
+        // Role id -> display name pairs, limited to the current scope
+        function scopedRoleEntries(data) {
+            return Object.entries(data.roles).filter(([, name]) => isRoleInScope(name));
+        }
+
+        // Generate preview
+        function generatePreview(data) {
+            const term = searchTerm.trim();
+            const inScope = scopedLines(data);
+            const linesToShow = term ? inScope.filter(line => lineMatchesSearch(line, term)) : inScope;
+
+            // Every matching line is rendered. Building one HTML string and
+            // assigning it once keeps a few thousand rows well under a frame,
+            // where per-row createElement/appendChild would not.
+            const html = new Array(linesToShow.length);
+            linesToShow.forEach((line, i) => {
+                html[i] =
+                    '<tr><td class="col-tc">' + escapeHtml(line.tcIn) + '</td>' +
+                    '<td class="col-tc">' + escapeHtml(line.tcOut) + '</td>' +
+                    '<td class="col-char">' + highlightMatches(line.character, term) + '</td>' +
+                    '<td class="col-text">' + highlightMatches(line.original, term) + '</td>' +
+                    '<td class="col-track">' + escapeHtml(line.track) + '</td></tr>';
+            });
+            previewBody.innerHTML = html.join('');
+
+            // Stats
+            lineCount.textContent = linesToShow.length === data.lines.length
+                ? String(data.lines.length)
+                : linesToShow.length + ' / ' + data.lines.length;
+            charCount.textContent = new Set(linesToShow.map(l => l.character)).size;
+
+            const searchCount = document.getElementById('searchCount');
+            if (term) {
+                searchCount.textContent = linesToShow.length +
+                    (linesToShow.length === 1 ? ' line' : ' lines');
+                searchCount.classList.toggle('empty', linesToShow.length === 0);
+                searchCount.classList.add('visible');
+            } else {
+                searchCount.classList.remove('visible', 'empty');
+            }
         }
 
         // Generate roles list
@@ -1239,379 +2185,1377 @@
             const rolesList = document.getElementById('rolesList');
             const rolesCount = document.getElementById('rolesCount');
             const rolesSection = document.getElementById('rolesSection');
-            
+
             rolesList.innerHTML = '';
-            
-            const roleNames = Object.values(data.roles);
-            rolesCount.textContent = `${roleNames.length} character${roleNames.length !== 1 ? 's' : ''}`;
-            
+
+            const roleNames = allRoleNames(data);
+            const counts = roleLineCounts(data);
+            rolesCount.textContent = roleNames.length + ' character' + (roleNames.length !== 1 ? 's' : '');
+
             roleNames.forEach(name => {
                 const color = data.roleColors[name] || '#6366f1';
                 const tag = document.createElement('div');
                 tag.className = 'role-tag';
                 tag.dataset.character = name;
-                tag.innerHTML = `
-                    <span class="role-color" style="background-color: ${color}"></span>
-                    <span>${name}</span>
-                `;
-                tag.addEventListener('click', () => filterByCharacter(name));
+                tag.title = 'Click to add or remove this role from the export';
+                tag.innerHTML =
+                    '<span class="role-color" style="background-color: ' + escapeHtml(color) + '"></span>' +
+                    '<span class="role-name">' + escapeHtml(name) + '</span>' +
+                    '<span class="role-count">' + (counts.get(name) || 0) + '</span>';
+                tag.addEventListener('click', () => toggleRole(name));
                 rolesList.appendChild(tag);
             });
-            
+
             rolesSection.classList.add('visible');
+            refreshRoleTags();
+        }
+
+        // ============================================================
+        // Programme poster (TMDB)
+        // ------------------------------------------------------------
+        // The API key stays server side, in a Netlify environment variable
+        // read by netlify/functions/tmdb.js - it never reaches the browser.
+        // Opened straight off disk there is no function to call, so the
+        // lookup fails and the poster is simply left out.
+        // ============================================================
+        const TMDB_PROXY = '/.netlify/functions/tmdb';
+        const TMDB_IMG = 'https://image.tmdb.org/t/p/w185';
+        const TMDB_PAGE = 'https://www.themoviedb.org/';
+
+        // Delivery filenames are mostly workflow tokens; strip them so what is
+        // left is the programme name.
+        function isFilenameNoise(part) {
+            return /^\d+$/.test(part) ||
+                   /^\d+(?:[.,]\d+)?fps$/i.test(part) ||
+                   /^(?:ep|episode|s|season)[ _-]?\d*$/i.test(part) ||
+                   /^(?:v|rev)\d*$/i.test(part) ||
+                   /^(?:vf|vff|vfq|vo|vost|vostfr|va|vm|sub|subs|transcript|script|voiceover|voice|over|dub|dubbing|doublage|voix|adaptation|adapt|rythmo|lipsync|sync|detx|copy|final|draft|def|proxy|proxydub|mix|mixage|master|prores|fps|hd|sd|uhd|4k|qc|fr|en|es|de|it|pt|nl)$/i.test(part);
+        }
+
+        function cleanTitleParts(text) {
+            return (text || '').replace(/\.detx$/i, '')
+                .split(/[_\-\s]+/)
+                .filter(p => p.length > 0 && !isFilenameNoise(p))
+                // EatSmart -> Eat Smart, so the search has words to work with
+                .map(p => p.replace(/([a-z0-9])([A-Z])/g, '$1 $2'));
+        }
+
+        function titleGuessFromFilename(filename) {
+            return cleanTitleParts(filename).join(' ').trim();
+        }
+
+        // Compare loosely - "Seen Heard A History of black television" should
+        // still recognise "Seen & Heard: The History of Black Television".
+        function normalizeForMatch(text) {
+            return (text || '').toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/&/g, ' and ')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+        }
+
+        // A bare code like SNH identifies nothing on its own, and TMDB will
+        // happily return SNH-2587 for it. Such a query only counts on an exact
+        // title.
+        function isWeakQuery(query) {
+            return query.length <= 4 && !/[a-z]/.test(query) && !/\s/.test(query);
+        }
+
+        function looksLikeMatch(query, name) {
+            const q = normalizeForMatch(query);
+            const n = normalizeForMatch(name);
+            if (!q || !n) return false;
+            if (n.indexOf(q) === 0 || q.indexOf(n) === 0) return true;
+            const words = q.split(' ');
+            const inName = new Set(n.split(' '));
+            const hits = words.filter(w => inName.has(w)).length;
+            return hits >= 2 && hits / words.length >= 0.6;
+        }
+
+        // Most trustworthy first: the DETX title, then its part before the
+        // colon, then the filename. Some DETX files carry the filename in
+        // <title>, so both go through the same token cleaner.
+        function posterQueries(data, filename) {
+            const out = [];
+            const add = (query, guard) => {
+                const value = (query || '').trim();
+                if (value && !out.some(e => e.query === value)) {
+                    out.push({ query: value, guard: isWeakQuery(value) ? 'exact' : guard });
+                }
+            };
+            const title = data && data.metadata ? data.metadata.title : '';
+            add(title);
+            if (title && title.indexOf(':') !== -1) add(title.split(':')[0]);
+            add(titleGuessFromFilename(filename));
+
+            // An unknown trailing token - 25FPS, ADAPTATION, a client's own
+            // code - sinks an otherwise good query, so retry without them.
+            // These shortened queries are guarded: dropping words widens the
+            // search, and a wrong poster is worse than none.
+            [title, filename].forEach(source => {
+                const tokens = cleanTitleParts(source);
+                for (let take = tokens.length; take >= 2; take--) {
+                    add(tokens.slice(0, take).join(' '), 'loose');
+                }
+            });
+            return out;
+        }
+
+        async function tmdbLookup(queries) {
+            for (const entry of queries) {
+                const query = entry.query;
+                try {
+                    const res = await fetch(TMDB_PROXY, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            endpoint: 'search/multi',
+                            params: 'include_adult=false&query=' + encodeURIComponent(query)
+                        })
+                    });
+                    if (!res.ok) continue;
+                    const json = await res.json();
+                    const hit = (json.results || []).find(r => {
+                        if (r.media_type !== 'tv' && r.media_type !== 'movie') return false;
+                        if (!r.poster_path) return false;
+                        const name = r.name || r.title || '';
+                        if (entry.guard === 'exact') {
+                            return normalizeForMatch(name) === normalizeForMatch(query);
+                        }
+                        if (entry.guard === 'loose') return looksLikeMatch(query, name);
+                        return true;
+                    });
+                    if (hit) return { hit, query };
+                } catch (error) {
+                    // offline, blocked or rate limited - the poster is optional
+                    console.warn('TMDB lookup failed for', query, error);
+                }
+            }
+            return null;
+        }
+
+        // A late response must not paint over a newer file's poster
+        let posterRequest = 0;
+
+        function clearProgramPoster() {
+            posterRequest++;
+            const poster = document.getElementById('programPoster');
+            poster.classList.remove('visible');
+            poster.removeAttribute('href');
+            document.getElementById('programPosterImg').removeAttribute('src');
+            document.getElementById('programMatch').textContent = '';
+        }
+
+        async function loadProgramPoster(data, filename) {
+            clearProgramPoster();
+            if (location.protocol === 'file:') return;   // no function to call
+            const token = posterRequest;
+            const match = document.getElementById('programMatch');
+            match.textContent = 'searching TMDB\u2026';
+
+            const found = await tmdbLookup(posterQueries(data, filename));
+            if (token !== posterRequest) return;   // a newer file superseded this
+
+            if (!found) {
+                match.textContent = 'no TMDB match';
+                return;
+            }
+
+            const hit = found.hit;
+            const name = hit.name || hit.title || '';
+            const year = (hit.first_air_date || hit.release_date || '').slice(0, 4);
+            const kind = hit.media_type === 'tv' ? 'TV' : 'Film';
+
+            const poster = document.getElementById('programPoster');
+            document.getElementById('programPosterImg').src = TMDB_IMG + hit.poster_path;
+            document.getElementById('programPosterImg').alt = name;
+            poster.href = TMDB_PAGE + hit.media_type + '/' + hit.id;
+            poster.title = name + (year ? ' (' + year + ')' : '');
+            poster.classList.add('visible');
+
+            match.innerHTML = 'TMDB \u00b7 <b>' + escapeHtml(name) + '</b>' +
+                              (year ? ' (' + year + ')' : '') + ' \u00b7 ' + kind;
         }
 
         // Show program info
         function showProgramInfo(filename) {
             const { programName, episode, title } = parseFilename(filename);
             const programSection = document.getElementById('programSection');
-            
+
             document.getElementById('programName').textContent = programName || '—';
             document.getElementById('programEpisode').textContent = episode || '—';
             document.getElementById('programTitle').textContent = title || '—';
-            
+
             programSection.classList.add('visible');
+            loadProgramPoster(parsedData, filename);
         }
 
-        // Filter by character
-        function filterByCharacter(characterName) {
+        // Repaint chips: selected state, and dimming for roles with no search hit
+        function refreshRoleTags() {
+            if (!parsedData) return;
+            const term = searchTerm.trim();
             const rolesList = document.getElementById('rolesList');
+
+            const hitRoles = new Set();
+            if (term) {
+                parsedData.lines.forEach(line => {
+                    if (lineMatchesSearch(line, term)) hitRoles.add(line.character);
+                });
+            }
+
+            rolesList.querySelectorAll('.role-tag').forEach(tag => {
+                const name = tag.dataset.character;
+                const picked = selectedRoles.has(name);
+                tag.classList.toggle('active', picked);
+                // never dim a role that is part of the export selection
+                tag.classList.toggle('dimmed', !!term && !hitRoles.has(name) && !picked);
+            });
+
+            updateFilterIndicator();
+            updateExportScope();
+        }
+
+        function updateFilterIndicator() {
             const filterIndicator = document.getElementById('filterIndicator');
             const filterValue = document.getElementById('filterValue');
-            
-            // Toggle filter if clicking same character
-            if (currentFilter === characterName) {
-                clearFilter();
+
+            if (selectedRoles.size === 0) {
+                filterIndicator.classList.remove('visible');
                 return;
             }
-            
-            currentFilter = characterName;
-            
-            // Update active state on role tags
-            rolesList.querySelectorAll('.role-tag').forEach(tag => {
-                if (tag.dataset.character === characterName) {
-                    tag.classList.add('active');
-                } else {
-                    tag.classList.remove('active');
-                }
-            });
-            
-            // Show filter indicator
-            filterValue.textContent = characterName;
+
+            const names = Array.from(selectedRoles);
+            const shown = names.slice(0, 3).join(', ');
+            filterValue.textContent = names.length > 3
+                ? shown + ' +' + (names.length - 3) + ' more'
+                : shown;
             filterIndicator.classList.add('visible');
-            
-            // Update preview
-            generatePreview(parsedData, characterName);
+        }
+
+        function toggleRole(name) {
+            if (selectedRoles.has(name)) selectedRoles.delete(name);
+            else selectedRoles.add(name);
+            refreshRoleTags();
+            generatePreview(parsedData);
+            applyFormat(currentFormat);
+        }
+
+        function selectAllRoles() {
+            if (!parsedData) return;
+            selectedRoles = new Set(allRoleNames(parsedData));
+            refreshRoleTags();
+            generatePreview(parsedData);
+            applyFormat(currentFormat);
         }
 
         // Clear filter
         function clearFilter() {
-            const rolesList = document.getElementById('rolesList');
-            const filterIndicator = document.getElementById('filterIndicator');
-            
-            currentFilter = null;
-            
-            // Remove active state from all role tags
-            rolesList.querySelectorAll('.role-tag').forEach(tag => {
-                tag.classList.remove('active');
-            });
-            
-            // Hide filter indicator
-            filterIndicator.classList.remove('visible');
-            
-            // Update preview
-            if (parsedData) {
-                generatePreview(parsedData);
-            }
+            selectedRoles = new Set();
+            refreshRoleTags();
+            if (parsedData) generatePreview(parsedData);
+            applyFormat(currentFormat);
+        }
+
+        function setSearchTerm(value) {
+            searchTerm = value || '';
+            document.getElementById('searchClear').classList.toggle('visible', searchTerm.length > 0);
+            if (!parsedData) return;
+            refreshRoleTags();
+            generatePreview(parsedData);
         }
 
         // Parse filename to extract program, title and episode
         function parseFilename(filename) {
-            // Remove extension
             const baseName = filename.replace(/\.detx$/i, '');
-            
-            let programName = '';
-            let title = '';
+            const parts = baseName.split(/[_\-\s]+/).filter(p => p.length > 0);
+
+            const isDate = (p) => /^\d{6,8}$/.test(p);
+            const isNumber = (p) => /^\d+$/.test(p);
+            const isEpisodeMarker = (p) => /^(?:ep|episode)[ _-]?\d*$/i.test(p);
+            const isWord = (p) => /^[A-Za-z][A-Za-z0-9']{0,23}$/.test(p);
+            const isStatus = (p) => /^(?:FINAL|DRAFT|V\d+|REV\d*)$/i.test(p);
+
+            // The programme name is the leading run of words, not just the
+            // first one: KILLER_GRANNIES_102 is Killer Grannies, episode 102.
+            const nameParts = [];
+            for (const part of parts) {
+                if (!isWord(part) || isEpisodeMarker(part) ||
+                    isStatus(part) || isFilenameNoise(part)) break;
+                nameParts.push(part);
+            }
+            const programName = nameParts.join(' ').toUpperCase();
+
+            // An explicit Ep/Episode marker wins. Failing that, a bare number
+            // is the episode - EatSmart_101_VF_18022026 means episode 101,
+            // not a programme called 101.
             let episode = '';
-            
-            // Split filename into parts
-            const parts = baseName.split(/[_\-\s]+/);
-            
-            // First part is usually the program name (e.g., SNH)
-            if (parts.length > 0 && /^[A-Z]{2,10}$/i.test(parts[0])) {
-                programName = parts[0].toUpperCase();
+            const marked = baseName.match(/(?:^|[^A-Za-z])(?:ep|episode)[ _-]?(\d{1,4})/i);
+            if (marked) {
+                episode = marked[1];
+            } else {
+                const bare = parts.find(p => /^\d{1,4}$/.test(p));
+                if (bare) episode = bare;
             }
-            
-            // Try to extract episode number (e.g., Ep102, EP_102, Episode102, etc.)
-            const episodeMatch = baseName.match(/[Ee][Pp]_?(\d+)/);
-            if (episodeMatch) {
-                episode = episodeMatch[1];
-            }
-            
-            // Find significant title words (not dates, not episode markers)
-            const titleCandidates = parts.filter(part => {
-                // Skip date patterns
-                if (/^\d{6,8}$/.test(part)) return false;
-                // Skip episode markers
-                if (/^[Ee][Pp]\d+$/.test(part)) return false;
-                // Skip program name prefix
-                if (programName && part.toUpperCase() === programName) return false;
-                // Skip common prefixes
-                if (/^(Transcript)$/i.test(part)) return false;
-                return true;
-            });
-            
-            // Look for FINAL, DRAFT, etc. as title
-            const statusWords = titleCandidates.filter(p => /^(FINAL|DRAFT|V\d+|REV\d*)$/i.test(p));
-            if (statusWords.length > 0) {
-                title = statusWords[0].toUpperCase();
-            } else if (titleCandidates.length > 0) {
-                title = titleCandidates[0];
-            }
-            
+
+            // Whatever follows the name: FINAL / DRAFT / V2 read as a version
+            // label, otherwise the first real word. Blank when the filename
+            // carries no title at all - most of them do not.
+            const rest = parts.slice(nameParts.length);
+            const status = rest.find(isStatus);
+            const title = status ? status.toUpperCase()
+                : (rest.find(p => isWord(p) && !isEpisodeMarker(p) &&
+                                  !isDate(p) && !isNumber(p) && !isFilenameNoise(p)) || '');
+
             return { programName, title, episode };
         }
 
-        // Convert to XLSX
-        function convertToXLSX(data, filename) {
-            // Parse filename for title and episode
-            const { programName, title, episode } = parseFilename(filename);
-            
-            // Define styles
-            const styles = {
-                header: {
-                    font: { bold: true, color: { rgb: "FFFFFF" } },
-                    fill: { fgColor: { rgb: "4F46E5" } }, // Primary purple
-                    alignment: { horizontal: "center", vertical: "center" }
-                },
-                headerLight: {
-                    font: { bold: true, color: { rgb: "1E1B4B" } },
-                    fill: { fgColor: { rgb: "E0E7FF" } }, // Light indigo
-                    alignment: { horizontal: "center", vertical: "center" }
-                },
-                translateCell: {
-                    fill: { fgColor: { rgb: "EDE9FE" } } // Light purple for translation areas
-                },
-                metaRow: {
-                    fill: { fgColor: { rgb: "F5F3FF" } } // Very light purple for metadata
-                },
-                roleRow: {
-                    fill: { fgColor: { rgb: "F0FDFA" } } // Light teal for roles
-                },
-                lineRowEven: {
-                    fill: { fgColor: { rgb: "FAFAFA" } } // Light gray
-                },
-                lineRowOdd: {
-                    fill: { fgColor: { rgb: "FFFFFF" } } // White
-                },
-                tcCell: {
-                    font: { color: { rgb: "6B7280" } },
-                    alignment: { horizontal: "center" }
-                },
-                characterCell: {
-                    font: { color: { rgb: "6366F1" }, bold: true }
-                }
+        // ============================================================
+        // Shared sheet model (used by both the XLSX writer and the
+        // in-browser spreadsheet preview, so they can never diverge)
+        // ============================================================
+        const SHEET_STYLE = {
+            header:    { bg: '4F46E5', color: 'FFFFFF', bold: true, align: 'center', valign: 'center' },
+            meta:      { bg: 'F5F3FF' },
+            translate: { bg: 'EDE9FE' },
+            role:      { bg: 'F0FDFA' },
+            rowEven:   { bg: 'FAFAFA' },
+            rowOdd:    { bg: 'FFFFFF' },
+            tc:        { color: '6B7280', align: 'center' },
+            character: { color: '6366F1', bold: true }
+        };
+
+        // Column order: the two timecodes, then role, then the text pair,
+        // then the bookkeeping columns.
+        //   0 TCin | 1 TCout | 2 Character | 3 Original | 4 Translated | 5 Type | 6 Track
+        const COL = { TC_IN: 0, TC_OUT: 1, CHARACTER: 2, ORIGINAL: 3, TRANSLATED: 4, TYPE: 5, TRACK: 6 };
+        const SHEET_HEADERS = ['TCin', 'TCout', 'Character', 'Original', 'Translated', 'Type', 'Track'];
+
+        // Build the row matrix + layout metadata for one transcript sheet.
+        // `lines` and `roleEntries` are passed in so the same builder serves the
+        // whole programme, a role selection, or a single role's own sheet.
+        function buildSheetModel(data, filename, lines, roleEntries) {
+            const { title, episode } = parseFilename(filename);
+
+            const metaRow = (type, value) => {
+                const row = ['', '', '', '', '', '', ''];
+                row[COL.TYPE] = type;
+                row[COL.ORIGINAL] = value;
+                return row;
             };
-            
-            // Prepare rows - Header first, then metadata, then Roles, then Lines
+
             const rows = [
-                // Header row first
-                ['TCin', 'Type', 'Character', 'Original', 'Translated', 'Track', 'TCout'],
-                // Metadata block
-                ['', 'title', '', title || '', '', '', ''],
-                ['', 'episode', '', episode || '', '', '', ''],
-                ['', 'author', '', '', '', '', ''],
-                ['', 'summary', '', '', '', '', '']
+                SHEET_HEADERS.slice(),
+                metaRow('title', data.metadata.title || title || ''),
+                metaRow('episode', data.metadata.episode || episode || ''),
+                metaRow('author', data.metadata.author || ''),
+                metaRow('summary', data.metadata.summary || '')
             ];
 
-            // Track header row index (row 0)
-            const headerRowIndex = 0;
-            
-            // Track where metadata starts and ends
             const metaStartRow = 1;
             const metaEndRow = 4;
 
-            // Add role rows
-            Object.entries(data.roles).forEach(([id, name]) => {
-                rows.push(['', 'role', id, name, '', '', '']);
+            roleEntries.forEach(([id, name]) => {
+                const row = ['', '', '', '', '', '', ''];
+                row[COL.TYPE] = 'role';
+                row[COL.CHARACTER] = id;
+                row[COL.ORIGINAL] = name;
+                rows.push(row);
             });
 
-            // Track where lines start
             const linesStartRow = rows.length;
 
-            // Add line rows
-            data.lines.forEach(line => {
-                rows.push([
-                    line.tcIn,
-                    'line',
-                    line.character,
-                    line.original,
-                    line.translated,
-                    line.track,
-                    line.tcOut
-                ]);
+            lines.forEach(line => {
+                const row = ['', '', '', '', '', '', ''];
+                row[COL.TC_IN] = line.tcIn;
+                row[COL.TC_OUT] = line.tcOut;
+                row[COL.CHARACTER] = line.character;
+                row[COL.ORIGINAL] = line.original;
+                row[COL.TRANSLATED] = line.translated;
+                row[COL.TYPE] = 'line';
+                row[COL.TRACK] = line.track;
+                rows.push(row);
             });
 
-            // Calculate max widths for columns
-            let colWidths = [12, 8, 10, 20, 60, 6, 12]; // defaults - E column (Translated) starts wider
-            
-            // Track max character name length separately
+            // Column widths
+            let colWidths = [12, 12, 10, 20, 60, 8, 6];
             let maxCharNameLen = 10;
-            
-            rows.forEach((row, rowIdx) => {
+
+            rows.forEach(row => {
+                const type = row[COL.TYPE];
                 row.forEach((cell, idx) => {
                     const len = cell ? String(cell).length : 0;
-                    
-                    // For role rows, character name is in D column (idx 3), use it for C column width
-                    if (row[1] === 'role' && idx === 3) {
-                        if (len > maxCharNameLen) {
-                            maxCharNameLen = len;
-                        }
-                    }
-                    // For line rows, character name is in C column (idx 2)
-                    else if (row[1] === 'line' && idx === 2) {
-                        if (len > maxCharNameLen) {
-                            maxCharNameLen = len;
-                        }
-                    }
-                    // For D column (Original), track separately
-                    else if (idx === 3 && row[1] === 'line') {
-                        if (len > colWidths[idx]) {
-                            colWidths[idx] = len;
-                        }
+                    if (type === 'role' && idx === COL.ORIGINAL) {
+                        if (len > maxCharNameLen) maxCharNameLen = len;
+                    } else if (type === 'line' && idx === COL.CHARACTER) {
+                        if (len > maxCharNameLen) maxCharNameLen = len;
+                    } else if (type === 'line' && idx === COL.ORIGINAL) {
+                        if (len > colWidths[idx]) colWidths[idx] = len;
                     }
                 });
             });
-            
-            // Set C column width from character names
-            colWidths[2] = maxCharNameLen;
-            
-            // Add padding and cap widths
+
+            colWidths[COL.CHARACTER] = maxCharNameLen;
             colWidths = colWidths.map((w, i) => {
-                if (i === 4) return Math.max(w + 6, 70); // Translated - minimum 70, for French adaptation
-                if (i === 3) return Math.min(w + 6, 100); // Original
-                if (i === 2) return Math.min(w + 4, 40); // Character
+                if (i === COL.TRANSLATED) return Math.max(w + 6, 70);
+                if (i === COL.ORIGINAL) return Math.min(w + 6, 100);
+                if (i === COL.CHARACTER) return Math.min(w + 4, 40);
                 return Math.min(w + 2, 20);
             });
+            colWidths[COL.CHARACTER] = 40; // ~300 pixels
 
-            // Create worksheet
-            const ws = XLSX.utils.aoa_to_sheet(rows);
+            return { rows, metaStartRow, metaEndRow, linesStartRow, colWidths };
+        }
 
-            // Apply styles to cells
-            const range = XLSX.utils.decode_range(ws['!ref']);
-            
-            for (let R = range.s.r; R <= range.e.r; R++) {
-                for (let C = range.s.c; C <= range.e.c; C++) {
-                    const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-                    if (!ws[cellRef]) ws[cellRef] = { v: '', t: 's' };
-                    
-                    // Row 0: Header row
-                    if (R === 0) {
-                        ws[cellRef].s = styles.header;
-                    }
-                    // Rows 1-4: Metadata block (title, episode, author, summary)
-                    else if (R >= metaStartRow && R <= metaEndRow) {
-                        ws[cellRef].s = { ...styles.metaRow };
-                        // Translation cells for title (row 1) and summary (row 4) - column E
-                        if (C === 4 && (R === 1 || R === 4)) {
-                            ws[cellRef].s = styles.translateCell;
-                        }
-                    }
-                    // Role rows (from row 5 to before lines)
-                    else if (R > metaEndRow && R < linesStartRow) {
-                        ws[cellRef].s = styles.roleRow;
-                    }
-                    // Line rows
-                    else if (R >= linesStartRow) {
-                        const isEven = (R - linesStartRow) % 2 === 0;
-                        ws[cellRef].s = isEven ? { ...styles.lineRowEven } : { ...styles.lineRowOdd };
-                        
-                        // Timecode columns (A and G)
-                        if (C === 0 || C === 6) {
-                            ws[cellRef].s = { ...ws[cellRef].s, ...styles.tcCell };
-                        }
-                        // Character column (C)
-                        if (C === 2) {
-                            ws[cellRef].s = { ...ws[cellRef].s, ...styles.characterCell };
-                        }
-                        // Translated column (E) - highlight for translation
-                        if (C === 4) {
-                            ws[cellRef].s = styles.translateCell;
-                        }
-                    }
+        // Resolve the style for one cell of a transcript sheet
+        function sheetCellStyle(model, R, C) {
+            if (R === 0) return SHEET_STYLE.header;
+
+            if (R >= model.metaStartRow && R <= model.metaEndRow) {
+                if (C === COL.TRANSLATED && (R === model.metaStartRow || R === model.metaEndRow)) {
+                    return SHEET_STYLE.translate;
                 }
+                return SHEET_STYLE.meta;
             }
 
-            // Set column widths
-            // Note: Excel uses character width units, ~7.5 pixels per character. 300px ≈ 40 chars
-            colWidths[2] = 40; // Force C column to ~300 pixels
-            ws['!cols'] = colWidths.map(w => ({ wch: w }));
+            if (R > model.metaEndRow && R < model.linesStartRow) return SHEET_STYLE.role;
 
-            // Create Help sheet
-            const helpRows = [
-                ['TCin', 'Type', 'Character', 'Original', 'Translated', 'Track', 'TCout'],
-                ['Time code in', 'Type of row', 'Identifier of a character', 'Original content', 'Translated content', 'Numeric identifiers for line and loop', 'Time code out'],
-                ['Relevant for start, loop, shot, and line', 'For headers, will be: title, episode, summary, author or role.', 'Defined in header "role" and used as reference in lines', 'Also contains misc info: author name, episode code, ...', 'You only need to translate highlighted cells: title, summary and line', '', ''],
-                ['', 'For content, will be: start, loop, line or shot.', '', '', '', '', ''],
-                ['', 'You only need to translate the lines and these 2 headers: title and summary.', '', '', '', '', '']
+            // Line rows
+            if (C === COL.TRANSLATED) return SHEET_STYLE.translate;
+            const base = (R - model.linesStartRow) % 2 === 0 ? SHEET_STYLE.rowEven : SHEET_STYLE.rowOdd;
+            if (C === COL.TC_IN || C === COL.TC_OUT) return { ...base, ...SHEET_STYLE.tc };
+            if (C === COL.CHARACTER) return { ...base, ...SHEET_STYLE.character };
+            return base;
+        }
+
+        // Style descriptor -> xlsx-js-style cell style
+        function toXlsxStyle(s) {
+            const out = {};
+            if (s.bg) out.fill = { fgColor: { rgb: s.bg } };
+            if (s.bold || s.color) {
+                out.font = {};
+                if (s.bold) out.font.bold = true;
+                if (s.color) out.font.color = { rgb: s.color };
+            }
+            if (s.align || s.valign) {
+                out.alignment = {};
+                if (s.align) out.alignment.horizontal = s.align;
+                if (s.valign) out.alignment.vertical = s.valign;
+            }
+            return out;
+        }
+
+        // Style descriptor -> CSS for the preview tab
+        function toCssStyle(s) {
+            const css = [];
+            css.push('background:#' + (s.bg || 'FFFFFF'));
+            css.push('color:#' + (s.color || '111827'));
+            if (s.bold) css.push('font-weight:700');
+            if (s.align) css.push('text-align:' + s.align);
+            return css.join(';');
+        }
+
+        // Excel forbids [ ] * / \ ? : in sheet names and caps them at 31 chars
+        function uniqueSheetName(name, used) {
+            const base = (String(name).replace(/[\[\]\*\/\\\?:]/g, '-').trim() || 'Role').slice(0, 31);
+            let candidate = base;
+            let n = 2;
+            while (used.has(candidate.toLowerCase())) {
+                const suffix = '_' + n++;
+                candidate = base.slice(0, 31 - suffix.length) + suffix;
+            }
+            used.add(candidate.toLowerCase());
+            return candidate;
+        }
+
+        function transcriptSpec(name, model) {
+            return {
+                name,
+                rows: model.rows,
+                colWidths: model.colWidths,
+                styleFor: (r, c) => sheetCellStyle(model, r, c)
+            };
+        }
+
+        // Cast sheet: role in A, actor name left blank in B, line count in C
+        function castSpec(data, roleNames) {
+            const counts = roleLineCounts(data);
+            const rows = [['Role', 'Actor', 'Lines']];
+            roleNames.forEach(name => rows.push([name, '', counts.get(name) || 0]));
+
+            const widest = roleNames.reduce((max, n) => Math.max(max, String(n).length), 12);
+
+            return {
+                name: 'Cast',
+                rows,
+                colWidths: [Math.min(widest + 6, 45), 32, 10],
+                styleFor: (r, c) => {
+                    if (r === 0) return SHEET_STYLE.header;
+                    if (c === 1) return SHEET_STYLE.translate;              // to be filled in
+                    if (c === 2) return { ...SHEET_STYLE.role, ...SHEET_STYLE.tc };
+                    return { ...SHEET_STYLE.role, ...SHEET_STYLE.character };
+                }
+            };
+        }
+
+        function helpSpec() {
+            const rows = [
+                SHEET_HEADERS.slice(),
+                ['Time code in', 'Time code out', 'Identifier of a character', 'Original content', 'Translated content', 'Type of row', 'Numeric identifiers for line and loop'],
+                ['Relevant for start, loop, shot, and line', 'Relevant for start, loop, shot, and line', 'Defined in header "role" and used as reference in lines', 'Also contains misc info: author name, episode code, ...', 'You only need to translate highlighted cells: title, summary and line', 'For headers, will be: title, episode, summary, author or role.', ''],
+                ['', '', '', '', '', 'For content, will be: start, loop, line or shot.', ''],
+                ['', '', '', '', '', 'You only need to translate the lines and these 2 headers: title and summary.', ''],
+                ['', '', '', '', '', '', ''],
+                ['Cast sheet', 'Column A lists every exported role, column B is left blank for the actor cast in the role, column C is the number of spoken lines.', '', '', '', '', '']
             ];
 
-            const wsHelp = XLSX.utils.aoa_to_sheet(helpRows);
-
-            // Calculate help sheet column widths
-            let helpColWidths = [12, 12, 12, 12, 12, 12, 12];
-            helpRows.forEach(row => {
+            let colWidths = [12, 12, 12, 12, 12, 12, 12];
+            rows.forEach(row => {
                 row.forEach((cell, idx) => {
                     const len = cell ? String(cell).length : 0;
-                    if (len > helpColWidths[idx]) {
-                        helpColWidths[idx] = len;
-                    }
+                    if (len > colWidths[idx]) colWidths[idx] = len;
                 });
             });
-            helpColWidths = helpColWidths.map(w => Math.min(w + 4, 60));
+            colWidths = colWidths.map(w => Math.min(w + 4, 60));
 
-            // Style Help sheet
-            const helpRange = XLSX.utils.decode_range(wsHelp['!ref']);
-            for (let R = helpRange.s.r; R <= helpRange.e.r; R++) {
-                for (let C = helpRange.s.c; C <= helpRange.e.c; C++) {
-                    const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
-                    if (!wsHelp[cellRef]) wsHelp[cellRef] = { v: '', t: 's' };
-                    
-                    if (R === 0) {
-                        wsHelp[cellRef].s = styles.header;
-                    } else {
-                        wsHelp[cellRef].s = styles.metaRow;
-                    }
-                }
+            return {
+                name: 'Help',
+                rows,
+                colWidths,
+                styleFor: (r) => (r === 0 ? SHEET_STYLE.header : SHEET_STYLE.meta)
+            };
+        }
+
+        // The full workbook, as an ordered list of sheet specs. `data` is
+        // already narrowed to the selected roles.
+        function buildWorkbookSpecs(data, filename, opts) {
+            const roleNames = allRoleNames(data);
+            const roleEntries = Object.entries(data.roles);
+            const specs = [];
+
+            if (opts.sheetMode === 'perrole' && roleNames.length > 1) {
+                const used = new Set(['cast', 'help']);
+                roleNames.forEach(name => {
+                    const model = buildSheetModel(
+                        data, filename,
+                        data.lines.filter(line => line.character === name),
+                        roleEntries.filter(([, n]) => n === name)
+                    );
+                    specs.push(transcriptSpec(uniqueSheetName(name, used), model));
+                });
+            } else {
+                specs.push(transcriptSpec('Transcript',
+                    buildSheetModel(data, filename, data.lines, roleEntries)));
             }
 
-            wsHelp['!cols'] = helpColWidths.map(w => ({ wch: w }));
+            specs.push(castSpec(data, roleNames));
+            specs.push(helpSpec());
+            return specs;
+        }
 
-            // Create workbook with both sheets
+        // Convert to XLSX
+        function convertToXLSX(data, filename, opts) {
             const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, 'Transcript');
-            XLSX.utils.book_append_sheet(wb, wsHelp, 'Help');
+
+            buildWorkbookSpecs(data, filename, opts).forEach(spec => {
+                const ws = XLSX.utils.aoa_to_sheet(spec.rows);
+                const range = XLSX.utils.decode_range(ws['!ref']);
+
+                for (let R = range.s.r; R <= range.e.r; R++) {
+                    for (let C = range.s.c; C <= range.e.c; C++) {
+                        const cellRef = XLSX.utils.encode_cell({ r: R, c: C });
+                        if (!ws[cellRef]) ws[cellRef] = { v: '', t: 's' };
+                        ws[cellRef].s = toXlsxStyle(spec.styleFor(R, C));
+                    }
+                }
+
+                ws['!cols'] = spec.colWidths.map(w => ({ wch: w }));
+                XLSX.utils.book_append_sheet(wb, ws, spec.name);
+            });
 
             return wb;
         }
 
-        // Create particles for success animation
-        function createParticles() {
-            particles.innerHTML = '';
-            const count = 12;
-            for (let i = 0; i < count; i++) {
-                const particle = document.createElement('div');
-                particle.className = 'particle';
-                const angle = (i / count) * Math.PI * 2;
-                const distance = 60 + Math.random() * 40;
-                particle.style.left = '50%';
-                particle.style.top = '50%';
-                particle.style.setProperty('--tx', `${Math.cos(angle) * distance}px`);
-                particle.style.setProperty('--ty', `${Math.sin(angle) * distance}px`);
-                particle.style.animationDelay = `${i * 0.02}s`;
-                particles.appendChild(particle);
-            }
+        // ============================================================
+        // Timecode helpers
+        // ============================================================
+        // factor 1.001 = the NTSC "pull-down" ratio (24 -> 23.976, 30 -> 29.97)
+        const FRAME_RATES = {
+            '23.976': { label: '23.976 fps', nominal: 24, factor: 1.001, drop: false, multiplier: '999 1000' },
+            '24':     { label: '24 fps',     nominal: 24, factor: 1,     drop: false, multiplier: '1 1' },
+            '25':     { label: '25 fps',     nominal: 25, factor: 1,     drop: false, multiplier: '1 1' },
+            '29.97':  { label: '29.97 fps',  nominal: 30, factor: 1.001, drop: false, multiplier: '999 1000' },
+            '29.97df':{ label: '29.97 fps',  nominal: 30, factor: 1.001, drop: true,  multiplier: '999 1000' },
+            '30':     { label: '30 fps',     nominal: 30, factor: 1,     drop: false, multiplier: '1 1' }
+        };
+
+        function padNum(n, width) {
+            return String(Math.floor(Math.abs(n))).padStart(width, '0');
         }
+
+        // Accepts HH:MM:SS:FF, HH:MM:SS;FF (drop frame) and HH:MM:SS.mmm
+        function parseTimecode(tc) {
+            if (!tc) return null;
+            const m = String(tc).trim().match(/^(\d{1,3})[:;](\d{1,2})[:;](\d{1,2})[:;.,](\d{1,3})$/);
+            if (!m) return null;
+            return { h: +m[1], m: +m[2], s: +m[3], f: +m[4], isMs: m[4].length === 3 };
+        }
+
+        function tcToFrames(tc, rate) {
+            const p = parseTimecode(tc);
+            if (!p) return null;
+            if (p.isMs) {
+                const seconds = p.h * 3600 + p.m * 60 + p.s + p.f / 1000;
+                return Math.round(seconds * rate.nominal / rate.factor);
+            }
+            let frames = (p.h * 3600 + p.m * 60 + p.s) * rate.nominal + p.f;
+            if (rate.drop) {
+                const totalMinutes = p.h * 60 + p.m;
+                frames -= 2 * (totalMinutes - Math.floor(totalMinutes / 10));
+            }
+            return frames;
+        }
+
+        function framesToTc(frames, rate) {
+            if (frames === null || frames === undefined) return '';
+            let n = Math.max(0, Math.round(frames));
+            const fps = rate.nominal;
+            let sep = ':';
+
+            if (rate.drop) {
+                // Heidelberger drop-frame reconstruction (29.97 DF: 2 frames dropped
+                // every minute except every 10th minute)
+                const dropFrames = 2;
+                const framesPer10Min = fps * 60 * 10 - 9 * dropFrames; // 17982
+                const framesPerMin = fps * 60 - dropFrames;            // 1798
+                const d = Math.floor(n / framesPer10Min);
+                const m = n % framesPer10Min;
+                n += 9 * dropFrames * d;
+                if (m > dropFrames) n += dropFrames * Math.floor((m - dropFrames) / framesPerMin);
+                sep = ';';
+            }
+
+            const f = n % fps;
+            const s = Math.floor(n / fps) % 60;
+            const mi = Math.floor(n / (fps * 60)) % 60;
+            const h = Math.floor(n / (fps * 3600));
+            return padNum(h, 2) + ':' + padNum(mi, 2) + ':' + padNum(s, 2) + sep + padNum(f, 2);
+        }
+
+        function framesToSeconds(frames, rate) {
+            return frames * rate.factor / rate.nominal;
+        }
+
+        function secondsToSrtTime(seconds) {
+            const total = Math.max(0, Math.round(seconds * 1000));
+            return padNum(total / 3600000, 2) + ':' +
+                   padNum(total % 3600000 / 60000, 2) + ':' +
+                   padNum(total % 60000 / 1000, 2) + ',' +
+                   padNum(total % 1000, 3);
+        }
+
+        // How many frames to subtract so the subtitle file starts near zero
+        function computeOffsetFrames(data, rate, mode) {
+            if (mode === 'none') return 0;
+            if (mode === 'auto') {
+                const first = data.lines.find(l => parseTimecode(l.tcIn));
+                if (!first) return 0;
+                const p = parseTimecode(first.tcIn);
+                return tcToFrames(padNum(p.h, 2) + ':00:00:00', rate) || 0;
+            }
+            return tcToFrames(mode, rate) || 0;
+        }
+
+        // DETX carries no frame rate, but the frames field of its timecodes
+        // bounds it: a value of 24 can only occur at 25 fps or above. That pins
+        // the nominal rate, which is what timecode integrity depends on.
+        // 23.976 vs 24 (and 29.97 vs 30) share a nominal rate and are
+        // indistinguishable from timecodes alone - they only differ once
+        // timecodes are converted to seconds, i.e. for SRT.
+        function detectFrameRate(data) {
+            let maxFrames = -1;
+            let drop = false;
+
+            data.lines.forEach(line => {
+                [line.tcIn, line.tcOut].forEach(tc => {
+                    if (!tc) return;
+                    if (String(tc).indexOf(';') !== -1) drop = true;
+                    const p = parseTimecode(tc);
+                    if (p && !p.isMs && p.f > maxFrames) maxFrames = p.f;
+                });
+            });
+
+            if (maxFrames < 0) return null;
+            if (drop) return { fps: '29.97df', note: 'drop-frame timecodes' };
+            if (maxFrames >= 25) return { fps: '29.97', note: 'frames reach ' + maxFrames };
+            if (maxFrames === 24) return { fps: '25', note: 'frames reach 24' };
+            if (maxFrames === 23) return { fps: '24', note: 'frames reach 23' };
+            return null; // 22 or below fits every rate
+        }
+
+        let detectedFps = null;
+
+        function applyDetectedFrameRate(data) {
+            const select = document.getElementById('fpsSelect');
+            const hint = document.getElementById('fpsHint');
+            const found = detectFrameRate(data);
+
+            hint.classList.remove('warn');
+
+            if (found) {
+                detectedFps = found.fps;
+                select.value = found.fps;
+                hint.textContent = 'auto \u00b7 ' + found.note;
+            } else {
+                detectedFps = null;
+                hint.textContent = 'not detectable \u2014 please check';
+                hint.classList.add('warn');
+            }
+            hint.classList.add('visible');
+        }
+
+        function refreshFrameRateHint() {
+            const hint = document.getElementById('fpsHint');
+            if (!detectedFps) return;
+            const manual = document.getElementById('fpsSelect').value !== detectedFps;
+            hint.textContent = manual ? 'set by hand' : 'auto \u00b7 detected';
+            hint.classList.toggle('warn', manual);
+        }
+
+        // Lines that actually carry dialogue
+        function exportableLines(data) {
+            return data.lines.filter(l => (l.original || '').trim().length > 0 && parseTimecode(l.tcIn));
+        }
+
+        // Resolve TC out, falling back to a readable duration that never
+        // overlaps the following cue
+        function resolveOutFrames(line, nextLine, rate) {
+            const inFrames = tcToFrames(line.tcIn, rate);
+            let outFrames = tcToFrames(line.tcOut, rate);
+            if (outFrames === null || outFrames <= inFrames) {
+                const readingSeconds = Math.min(7, Math.max(1.2, line.original.length / 17));
+                outFrames = inFrames + Math.round(readingSeconds * rate.nominal / rate.factor);
+                if (nextLine) {
+                    const nextIn = tcToFrames(nextLine.tcIn, rate);
+                    if (nextIn !== null && nextIn > inFrames) outFrames = Math.min(outFrames, nextIn - 1);
+                }
+            }
+            return outFrames;
+        }
+
+        function cueText(line, opts) {
+            const text = (line.original || '').trim();
+            if (opts.names && line.character) {
+                return String(line.character).toUpperCase() + '\n' + text;
+            }
+            return text;
+        }
+
+        // ============================================================
+        // SRT
+        // ============================================================
+        function buildSRT(data, opts) {
+            const rate = FRAME_RATES[opts.fps] || FRAME_RATES['24'];
+            const offset = computeOffsetFrames(data, rate, opts.offset);
+            const lines = exportableLines(data);
+            const blocks = [];
+
+            lines.forEach((line, i) => {
+                const inFrames = tcToFrames(line.tcIn, rate) - offset;
+                const outFrames = resolveOutFrames(line, lines[i + 1], rate) - offset;
+                blocks.push(
+                    (i + 1) + '\n' +
+                    secondsToSrtTime(framesToSeconds(inFrames, rate)) + ' --> ' +
+                    secondsToSrtTime(framesToSeconds(outFrames, rate)) + '\n' +
+                    cueText(line, opts) + '\n'
+                );
+            });
+
+            return blocks.join('\n');
+        }
+
+        // ============================================================
+        // TTML (SMPTE time base, matching the EZConvert profile)
+        // ============================================================
+        function escapeXml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function ttmlTitleFor(data, filename) {
+            const parsed = parseFilename(filename);
+            return data.metadata.title || parsed.title || parsed.programName ||
+                   filename.replace(/\.detx$/i, '');
+        }
+
+        // ---- EZTitle profile: SMPTE time base, HH:MM:SS:FF timecodes --------
+        function buildTTMLEZ(data, opts, filename) {
+            const rate = FRAME_RATES[opts.fps] || FRAME_RATES['24'];
+            const lang = (opts.lang || 'fr').trim() || 'fr';
+            const lines = exportableLines(data);
+
+            const out = [];
+            out.push('<?xml version="1.0" encoding="UTF-8"?>');
+            out.push('<!--Subtitles file created by DETX Converter-->');
+            out.push('<tt xml:lang="' + escapeXml(lang) + '" xmlns="http://www.w3.org/ns/ttml" ' +
+                     'xmlns:tts="http://www.w3.org/ns/ttml#styling" ' +
+                     'xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ' +
+                     'xmlns:ttm="http://www.w3.org/ns/ttml#metadata" ' +
+                     'ttp:frameRate="' + rate.nominal + '" ' +
+                     'ttp:frameRateMultiplier="' + rate.multiplier + '" ' +
+                     'ttp:dropMode="' + (rate.drop ? 'dropNTSC' : 'nonDrop') + '" ' +
+                     'ttp:timeBase="smpte">');
+            out.push('  <head>');
+            out.push('    <metadata>');
+            out.push('      <ttm:title>' + escapeXml(ttmlTitleFor(data, filename)) + '</ttm:title>');
+            out.push('    </metadata>');
+            out.push('    <styling>');
+            out.push('      <style xml:id="style.center" tts:fontFamily="Arial" tts:fontSize="100%" ' +
+                     'tts:fontStyle="normal" tts:fontWeight="normal" tts:backgroundColor="transparent" ' +
+                     'tts:color="white" tts:textOutline="black 2px" tts:textAlign="center"/>');
+            out.push('    </styling>');
+            out.push('    <layout>');
+            out.push('      <region xml:id="region.after" tts:displayAlign="after" ' +
+                     'tts:backgroundColor="transparent" tts:origin="6% 50%" tts:extent="88% 36%"/>');
+            out.push('    </layout>');
+            out.push('  </head>');
+            out.push('  <body>');
+            out.push('    <div>');
+
+            lines.forEach((line, i) => {
+                const begin = framesToTc(tcToFrames(line.tcIn, rate), rate);
+                const end = framesToTc(resolveOutFrames(line, lines[i + 1], rate), rate);
+                const body = cueText(line, opts).split('\n').map(escapeXml).join('<br/>');
+                out.push('      <p style="style.center" region="region.after" begin="' + begin +
+                         '" end="' + end + '">' + body + '</p>');
+            });
+
+            out.push('    </div>');
+            out.push('  </body>');
+            out.push('</tt>');
+            out.push('');
+
+            return out.join('\n');
+        }
+
+        // ---- Youdub profile: SMPTE time base, speakers as ttm:agent -------
+        // Modelled on SNH_Ep102_FINAL_Transcript_06142024.ttml: no styling or
+        // layout block, agents sit directly under <head>, every cue carries
+        // ttm:agent + ttm:role="dialog".
+        function uuid4() {
+            const c = (typeof crypto !== 'undefined') ? crypto : null;
+            if (c && typeof c.randomUUID === 'function') {
+                try { return c.randomUUID(); } catch (e) { /* fall through */ }
+            }
+            const bytes = new Uint8Array(16);
+            if (c && typeof c.getRandomValues === 'function') {
+                c.getRandomValues(bytes);
+            } else {
+                for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+            }
+            bytes[6] = (bytes[6] & 0x0f) | 0x40;
+            bytes[8] = (bytes[8] & 0x3f) | 0x80;
+            const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+            return hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) +
+                   '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+        }
+
+        // char-<uuid> straight from the DETX role id when the source is
+        // CharactR, so ids round-trip; a fresh uuid otherwise.
+        function youdubAgentIds(data) {
+            const ids = new Map();
+            const used = new Set();
+
+            const claim = (name, base) => {
+                if (ids.has(name)) return;
+                let candidate = 'char-' + base;
+                while (used.has(candidate)) candidate = 'char-' + uuid4();
+                used.add(candidate);
+                ids.set(name, candidate);
+            };
+
+            Object.entries(data.roles).forEach(([id, name]) => {
+                claim(name, isUUID(id) ? id : uuid4());
+            });
+            allRoleNames(data).forEach(name => claim(name, uuid4()));
+
+            return ids;
+        }
+
+        function buildTTMLYoudub(data, opts, filename) {
+            const rate = FRAME_RATES[opts.fps] || FRAME_RATES['24'];
+            const lang = (opts.lang || 'fr').trim() || 'fr';
+            const lines = exportableLines(data);
+            const agents = youdubAgentIds(data);
+
+            const out = [];
+            out.push('<?xml version="1.0" encoding="UTF-8"?>');
+            out.push('<tt xmlns="http://www.w3.org/ns/ttml" xmlns:tt="http://www.w3.org/ns/ttml" ' +
+                     'xmlns:ttp="http://www.w3.org/ns/ttml#parameter" ' +
+                     'xmlns:tts="http://www.w3.org/ns/ttml#styling" ' +
+                     'xmlns:ttm="http://www.w3.org/ns/ttml#metadata" ' +
+                     'xml:lang="' + escapeXml(lang) + '" ' +
+                     'ttp:timeBase="smpte" ' +
+                     'ttp:frameRate="' + rate.nominal + '" ' +
+                     'ttp:frameRateMultiplier="' + rate.multiplier + '" ' +
+                     'ttp:dropMode="' + (rate.drop ? 'dropNTSC' : 'nonDrop') + '">');
+            out.push('  <head>');
+            out.push('    <metadata>');
+            out.push('      <ttm:title>' + escapeXml(filename.replace(/\.detx$/i, '')) + '</ttm:title>');
+            out.push('    </metadata>');
+
+            Array.from(agents.keys())
+                .sort((a, b) => String(a).localeCompare(String(b)))
+                .forEach(name => {
+                    out.push('    <ttm:agent xml:id="' + agents.get(name) + '" type="character">');
+                    out.push('      <ttm:name type="full">' + escapeXml(name) + '</ttm:name>');
+                    out.push('    </ttm:agent>');
+                });
+
+            out.push('  </head>');
+            out.push('  <body>');
+            out.push('    <div>');
+
+            lines.forEach((line, i) => {
+                const begin = framesToTc(tcToFrames(line.tcIn, rate), rate);
+                const end = framesToTc(resolveOutFrames(line, lines[i + 1], rate), rate);
+                const agent = agents.get(line.character);
+                // Youdub names each cue after the DETX line id, so ids survive
+                // a DETX -> TTML round trip; only fall back when there is none.
+                const rawId = String(line.id || '').replace(/[^A-Za-z0-9_.-]/g, '');
+                // Youdub keeps one cue on one line; the speaker rides on ttm:agent
+                const text = (line.original || '').trim().replace(/\s*\n\s*/g, ' ');
+                out.push('      <p xml:id="sub-' + (rawId || uuid4()) + '"' +
+                         (agent ? ' ttm:agent="' + agent + '"' : '') +
+                         ' begin="' + begin + '" end="' + end + '"' +
+                         ' ttm:role="dialog">' + escapeXml(text) + '</p>');
+            });
+
+            out.push('    </div>');
+            out.push('  </body>');
+            out.push('</tt>');
+            out.push('');
+
+            return out.join('\n');
+        }
+
+        // ============================================================
+        // RTF voice-over script
+        // ============================================================
+        // Escape to pure ASCII: \uN? unicode escapes keep the file readable
+        // by every RTF reader regardless of the code page it assumes
+        function rtfEscape(str) {
+            let out = '';
+            for (const ch of String(str == null ? '' : str)) {
+                const code = ch.codePointAt(0);
+                if (ch === '\\') out += '\\\\';
+                else if (ch === '{') out += '\\{';
+                else if (ch === '}') out += '\\}';
+                else if (ch === '\n') out += '\\line ';
+                else if (ch === '\r') continue;
+                else if (ch === '\t') out += '\\tab ';
+                else if (code < 128) out += ch;
+                else if (code <= 0xFFFF) out += '\\u' + (code > 32767 ? code - 65536 : code) + '?';
+                else {
+                    const v = code - 0x10000;
+                    const hi = 0xD800 + (v >> 10);
+                    const lo = 0xDC00 + (v & 0x3FF);
+                    out += '\\u' + (hi - 65536) + '?\\u' + (lo - 65536) + '?';
+                }
+            }
+            return out;
+        }
+
+        // Casting tables reference a role's sex with a single letter:
+        // F female, M male, N neutral. Anything the source does not state
+        // stays blank rather than being guessed.
+        const GENDER_LETTERS = {
+            f: 'F', female: 'F', femme: 'F', femelle: 'F', woman: 'F', women: 'F',
+            girl: 'F', fille: 'F',
+            m: 'M', male: 'M', homme: 'M', man: 'M', men: 'M', boy: 'M', garcon: 'M',
+            n: 'N', neutral: 'N', neutre: 'N', neuter: 'N', nb: 'N',
+            nonbinary: 'N', 'non-binary': 'N', nonbinaire: 'N', 'non-binaire': 'N',
+            other: 'N', autre: 'N', mixed: 'N', mixte: 'N', x: 'N'
+        };
+
+        function normalizeGender(value) {
+            const key = foldForSearch(value).trim();
+            if (!key) return '';
+            if (GENDER_LETTERS[key]) return GENDER_LETTERS[key];
+            const first = key.charAt(0);
+            if (first === 'f' || first === 'm' || first === 'n') return first.toUpperCase();
+            return '';
+        }
+
+        const RTF_ROLE_COLS = [2500, 3300, 3800, 5200, 9180];
+
+        function rtfTableRow(cells, aligns, isHeader) {
+            const borders = '\\clbrdrt\\brdrs\\brdrw10 \\clbrdrl\\brdrs\\brdrw10 ' +
+                            '\\clbrdrb\\brdrs\\brdrw10 \\clbrdrr\\brdrs\\brdrw10\\cltxlrtb\\cellx';
+            const out = [isHeader ? '\\trowd\\trhdr' : '\\trowd'];
+            RTF_ROLE_COLS.forEach(x => out.push(borders + x));
+            cells.forEach((cell, i) => {
+                out.push('\\pard\\intbl \\plain\\fs18' + (isHeader ? '\\b' : '') +
+                         '\\' + (aligns[i] || 'ql') + ' ' + rtfEscape(cell) + '\\cell');
+            });
+            out.push('\\row\\pard');
+            return out.join('\n');
+        }
+
+        function rtfSectionBreak() {
+            return '\\sect\n\\sectd\\sbkodd\\marglsxn1440\\margrsxn1440\\margtsxn1440\\margbsxn1440';
+        }
+
+        // Per-role statistics for the "Liste des roles" table
+        function collectRoleStats(data, rate) {
+            const stats = new Map();
+            const add = (name) => {
+                if (!stats.has(name)) {
+                    stats.set(name, { name, count: 0, firstFrames: null, gender: '', description: '' });
+                }
+                return stats.get(name);
+            };
+
+            Object.entries(data.roles).forEach(([id, name]) => {
+                const entry = add(name);
+                const meta = data.roleMeta[id] || {};
+                entry.gender = normalizeGender(meta.gender);
+                entry.description = meta.description || '';
+            });
+
+            data.lines.forEach(line => {
+                if (!line.character) return;
+                const entry = add(line.character);
+                if ((line.original || '').trim()) entry.count++;
+                const frames = tcToFrames(line.tcIn, rate);
+                if (frames !== null && (entry.firstFrames === null || frames < entry.firstFrames)) {
+                    entry.firstFrames = frames;
+                }
+            });
+
+            // The reference script sorts the cast alphabetically by name
+            const upper = (v) => String(v).toUpperCase();
+            return Array.from(stats.values()).sort((a, b) => {
+                const x = upper(a.name), y = upper(b.name);
+                return x < y ? -1 : x > y ? 1 : 0;
+            });
+        }
+
+        function buildRTF(data, opts, filename) {
+            const rate = FRAME_RATES[opts.fps] || FRAME_RATES['24'];
+            const parsed = parseFilename(filename);
+            const programName = data.metadata.title || parsed.programName || filename.replace(/\.detx$/i, '');
+            const episode = data.metadata.episode || parsed.episode || '';
+            const author = data.metadata.author || '';
+            const summary = data.metadata.summary || '';
+            const today = new Date();
+            const dateStr = padNum(today.getDate(), 2) + '/' + padNum(today.getMonth() + 1, 2) + '/' + today.getFullYear();
+
+            const roleStats = collectRoleStats(data, rate);
+            const totalLines = roleStats.reduce((sum, r) => sum + r.count, 0);
+
+            const out = [];
+            out.push('{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1036');
+            out.push('{\\fonttbl{\\f0\\fmodern\\fprq1\\fcharset0 Courier New;}{\\f1\\fswiss\\fcharset0 Arial;}}');
+            out.push('\\uc1');
+            out.push('{\\*\\generator DETX Converter}');
+            out.push('{\\info{\\author ' + rtfEscape(author) + '}}');
+
+            // Running header + page numbering
+            out.push('{\\header\\pard\\plain\\fs18\\qc ' + rtfEscape(programName) +
+                     (episode ? ' Ep: ' + rtfEscape(episode) : '') + '\\par');
+            out.push('}{\\footer\\trowd');
+            out.push('\\pard');
+            out.push('\\plain\\fs18\\qr Page {\\field{\\*\\fldinst PAGE}{\\fldrslt}}' +
+                     '\\plain\\fs18\\qr /{\\field{\\*\\fldinst NUMPAGES}{\\fldrslt}}\\par');
+            out.push('}\\trowd\\trrh600');
+            out.push('\\cltxlrtb\\cellx4590');
+            out.push('\\cltxlrtb\\cellx9180');
+            out.push('\\pard\\intbl \\plain\\fs18\\b\\ql Auteur(s): \\plain\\fs18\\i\\ql ' + rtfEscape(author) + '\\cell');
+            out.push('\\pard\\intbl \\plain\\fs18\\qr ' + dateStr + '\\cell');
+            out.push('\\row\\pard');
+
+            // Cover block
+            out.push('\\trowd\\trrh5000');
+            out.push('\\clvertalc\\cltxlrtb\\cellx9180');
+            out.push('\\pard\\intbl \\plain\\fs48\\b\\qc ' + rtfEscape(programName) +
+                     '\\line\\plain\\fs36\\i\\qc ' + rtfEscape(episode ? 'Ep: ' + episode : '') +
+                     '\\pard\\par');
+            out.push('\\pard \\sb400\\sa300 \\plain\\fs18\\b\\ql ' + rtfEscape('Résumé :') + '\\par');
+            out.push('\\pard\\plain\\fs18\\ql ' + rtfEscape(summary) + '\\par');
+            out.push('\\cell');
+            out.push('\\row\\pard');
+
+            // Roles
+            out.push(rtfSectionBreak());
+            out.push('\\pard \\sb400\\sa300 \\plain\\fs36\\b\\ql ' + rtfEscape('Liste des rôles') + '\\par');
+            out.push('\\pard\\fi-1836\\li1836\\tx1836');
+            out.push('\\plain\\fs18\\b\\ql ' + rtfEscape('Nombre de rôles') + '\\tab: \\plain\\fs18\\ql ' + roleStats.length + '\\par');
+            out.push('\\pard\\par');
+            out.push(rtfTableRow(['Nom', 'Lignage', 'Sexe', 'Premier TC', 'Description'],
+                                 ['qc', 'qc', 'qc', 'qc', 'qc'], true));
+            roleStats.forEach(role => {
+                out.push(rtfTableRow([
+                    String(role.name).toUpperCase(),
+                    String(role.count),
+                    role.gender,
+                    role.firstFrames === null ? '' : framesToTc(role.firstFrames, rate),
+                    role.description
+                ], ['ql', 'qc', 'qc', 'qc', 'qc'], false));
+            });
+            out.push('\\pard\\par');
+            out.push('\\pard\\fi-1836\\li1836\\tx1836');
+            out.push('\\plain\\fs18\\b\\ql Lignage total\\tab: \\plain\\fs18\\ql ' + totalLines + '\\par');
+
+            // Script
+            out.push(rtfSectionBreak());
+            out.push('\\pard \\sb400\\sa300 \\plain\\fs36\\b\\ql Script\\par');
+
+            const lines = exportableLines(data);
+            lines.forEach((line, i) => {
+                const begin = framesToTc(tcToFrames(line.tcIn, rate), rate);
+                const end = framesToTc(resolveOutFrames(line, lines[i + 1], rate), rate);
+                out.push('\\pard\\plain\\fs18 ' + begin + ' - ' + end + '\\par');
+                out.push('\\pard\\plain\\fs18\\b ' + rtfEscape(String(line.character || '').toUpperCase()) + '\\par');
+                out.push('\\pard\\plain\\fs18 ' + rtfEscape(line.original.trim()) + '\\par');
+                out.push('\\pard\\par');
+            });
+
+            out.push('}');
+            return out.join('\n');
+        }
+
+        // ============================================================
+        // Word document (.doc)
+        // ------------------------------------------------------------
+        // Word-flavoured HTML: Word opens it natively, keeps the headings,
+        // the role table and the page breaks, and it needs no zip library.
+        // ============================================================
+        const DOC_RULES = [
+            ['body', "font-family:'Calibri',sans-serif; font-size:11pt; color:#000;"],
+            ['h1', 'font-size:20pt; font-weight:700; margin:0 0 6pt 0;'],
+            ['h2', 'font-size:13pt; font-weight:700; margin:18pt 0 6pt 0;'],
+            ['p', 'margin:0 0 6pt 0;'],
+            ['p.cover-title', 'font-size:32pt; font-weight:700; text-align:center; margin:120pt 0 0 0;'],
+            ['p.cover-sub', 'font-size:14pt; font-style:italic; text-align:center; margin:6pt 0 0 0;'],
+            ['p.cover-meta', 'font-size:10pt; text-align:center; color:#444; margin:24pt 0 0 0;'],
+            ['p.count', 'font-size:11pt; margin:0 0 12pt 0;'],
+            ['table.roles', 'border-collapse:collapse; width:100%; font-size:10pt;'],
+            ['table.roles th', 'border:1px solid #000; padding:4pt 6pt; background:#eeeeee; font-weight:700; text-align:center;'],
+            ['table.roles td', 'border:1px solid #000; padding:4pt 6pt;'],
+            ['table.roles td.num', 'text-align:center;'],
+            ['p.tc', "font-family:'Consolas',monospace; font-size:9pt; color:#555; margin:12pt 0 0 0;"],
+            ['p.who', 'font-weight:700; font-size:11pt; margin:0;'],
+            ['p.said', 'margin:0 0 4pt 0;'],
+            ['p.summary', 'margin:0 0 12pt 0;']
+        ];
+
+        function docStyles(prefix) {
+            return DOC_RULES
+                .map(([sel, decl]) => (prefix ? prefix + ' ' + sel : sel) + ' { ' + decl + ' }')
+                .join('\n');
+        }
+
+        function buildDocParts(data, opts, filename) {
+            const rate = FRAME_RATES[opts.fps] || FRAME_RATES['24'];
+            const parsed = parseFilename(filename);
+            const programName = data.metadata.title || parsed.programName || filename.replace(/\.detx$/i, '');
+            const episode = data.metadata.episode || parsed.episode || '';
+            const author = data.metadata.author || '';
+            const summary = data.metadata.summary || '';
+            const today = new Date();
+            const dateStr = padNum(today.getDate(), 2) + '/' + padNum(today.getMonth() + 1, 2) + '/' + today.getFullYear();
+
+            const roleStats = collectRoleStats(data, rate);
+            const totalLines = roleStats.reduce((sum, r) => sum + r.count, 0);
+            const lines = exportableLines(data);
+            const brk = "<br clear=all style='mso-special-character:line-break; page-break-before:always'>";
+
+            const out = [];
+
+            // Cover
+            out.push('<p class=cover-title>' + escapeHtml(programName) + '</p>');
+            if (episode) out.push('<p class=cover-sub>Ep: ' + escapeHtml(episode) + '</p>');
+            out.push('<p class=cover-meta>' + escapeHtml(author ? 'Auteur(s) : ' + author + ' — ' : '') + dateStr + '</p>');
+            if (summary) {
+                out.push('<h2>Résumé :</h2>');
+                out.push('<p class=summary>' + escapeHtml(summary) + '</p>');
+            }
+
+            // Roles
+            out.push(brk);
+            out.push('<h1>Liste des rôles</h1>');
+            out.push('<p class=count><b>Nombre de rôles :</b> ' + roleStats.length + '</p>');
+            out.push('<table class=roles><thead><tr>' +
+                     '<th>Nom</th><th>Lignage</th><th>Sexe</th><th>Premier TC</th><th>Description</th>' +
+                     '</tr></thead><tbody>');
+            roleStats.forEach(role => {
+                out.push('<tr>' +
+                    '<td>' + escapeHtml(String(role.name).toUpperCase()) + '</td>' +
+                    '<td class=num>' + role.count + '</td>' +
+                    '<td class=num>' + escapeHtml(role.gender) + '</td>' +
+                    '<td class=num>' + escapeHtml(role.firstFrames === null ? '' : framesToTc(role.firstFrames, rate)) + '</td>' +
+                    '<td>' + escapeHtml(role.description) + '</td>' +
+                    '</tr>');
+            });
+            out.push('</tbody></table>');
+            out.push('<p class=count style="margin-top:12pt"><b>Lignage total :</b> ' + totalLines + '</p>');
+
+            // Script
+            out.push(brk);
+            out.push('<h1>Script</h1>');
+            lines.forEach((line, i) => {
+                const begin = framesToTc(tcToFrames(line.tcIn, rate), rate);
+                const end = framesToTc(resolveOutFrames(line, lines[i + 1], rate), rate);
+                out.push('<p class=tc>' + begin + ' - ' + end + '</p>');
+                out.push('<p class=who>' + escapeHtml(String(line.character || '').toUpperCase()) + '</p>');
+                out.push('<p class=said>' + escapeHtml(line.original.trim()) + '</p>');
+            });
+
+            return {
+                title: programName + (episode ? ' Ep: ' + episode : ''),
+                body: out.join('\n')
+            };
+        }
+
+        function buildDOC(data, opts, filename) {
+            const parts = buildDocParts(data, opts, filename);
+            return '﻿<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+                'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">\n' +
+                '<head><meta charset="utf-8">\n' +
+                '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">\n' +
+                '<title>' + escapeHtml(parts.title) + '</title>\n' +
+                '<!--[if gte mso 9]><xml><w:WordDocument>' +
+                '<w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/>' +
+                '</w:WordDocument></xml><![endif]-->\n' +
+                '<style>\n' +
+                '@page WordSection1 { size: 21cm 29.7cm; margin: 2cm 2cm 2cm 2cm; }\n' +
+                'div.WordSection1 { page: WordSection1; }\n' +
+                docStyles('') + '\n' +
+                '</style></head>\n' +
+                '<body><div class=WordSection1>\n' + parts.body + '\n</div></body></html>';
+        }
+
+        // ============================================================
+        // Export dispatch
+        // ============================================================
+        const FORMAT_INFO = {
+            xlsx: {
+                ext: 'xlsx', label: 'XLSX', desc: 'Excel workbook',
+                suffix: '', mime: ''
+            },
+            rtf: {
+                ext: 'rtf', label: 'RTF', desc: 'Voice-over script',
+                suffix: '', mime: 'application/rtf'
+            },
+            doc: {
+                ext: 'doc', label: 'DOC', desc: 'Word document',
+                suffix: '', mime: 'application/msword'
+            },
+            'ttml-ez': {
+                ext: 'ttml', label: 'TTML EZ', desc: 'EZTitle subtitles, SMPTE timecodes',
+                suffix: '_EZTitle', mime: 'application/ttml+xml;charset=utf-8'
+            },
+            'ttml-yd': {
+                ext: 'ttml', label: 'TTML YD', desc: 'Youdub subtitles, SMPTE + speaker agents',
+                suffix: '_Youdub', mime: 'application/ttml+xml;charset=utf-8'
+            },
+            srt: {
+                ext: 'srt', label: 'SRT', desc: 'SubRip subtitles',
+                suffix: '', mime: 'application/x-subrip;charset=utf-8'
+            }
+        };
+
+        function currentOptions() {
+            return {
+                fps: document.getElementById('fpsSelect').value,
+                offset: document.getElementById('offsetSelect').value,
+                lang: document.getElementById('langInput').value,
+                names: document.getElementById('namesCheck').checked,
+                sheetMode: document.getElementById('sheetsSelect').value
+            };
+        }
+
+        // The programme narrowed to the selected roles (everything when none
+        // are selected). Every builder works off this, so role filtering is
+        // uniform across all six formats.
+        function scopedData(data) {
+            if (!data || selectedRoles.size === 0) return data;
+            const roles = {};
+            const roleMeta = {};
+            Object.entries(data.roles).forEach(([id, name]) => {
+                if (selectedRoles.has(name)) {
+                    roles[id] = name;
+                    roleMeta[id] = data.roleMeta[id];
+                }
+            });
+            return {
+                ...data,
+                roles,
+                roleMeta,
+                lines: data.lines.filter(line => selectedRoles.has(line.character))
+            };
+        }
+
+        function slugForFile(str) {
+            return String(str).normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^A-Za-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 40);
+        }
+
+        function outputName(format) {
+            const info = FORMAT_INFO[format];
+            const base = currentFileName.replace(/\.detx$/i, '');
+            let scope = '';
+
+            if (parsedData && selectedRoles.size > 0) {
+                const picked = scopedRoleNames(parsedData);
+                if (picked.length === 1) scope = '_' + slugForFile(picked[0]);
+                else if (picked.length < allRoleNames(parsedData).length) scope = '_' + picked.length + 'roles';
+            }
+
+            return base + scope + (info.suffix || '') + '.' + info.ext;
+        }
+
+        function buildTextExport(format) {
+            const opts = currentOptions();
+            const data = scopedData(parsedData);
+            if (format === 'srt') return buildSRT(data, opts);
+            if (format === 'ttml-ez') return buildTTMLEZ(data, opts, currentFileName);
+            if (format === 'ttml-yd') return buildTTMLYoudub(data, opts, currentFileName);
+            if (format === 'rtf') return buildRTF(data, opts, currentFileName);
+            if (format === 'doc') return buildDOC(data, opts, currentFileName);
+            return '';
+        }
+
+        function downloadText(text, filename, mime) {
+            const blob = new Blob([text], { type: mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+
+        function runExport(format) {
+            if (format === 'xlsx') {
+                const wb = convertToXLSX(scopedData(parsedData), currentFileName, currentOptions());
+                XLSX.writeFile(wb, outputName('xlsx'));
+                return;
+            }
+            downloadText(buildTextExport(format), outputName(format), FORMAT_INFO[format].mime);
+        }
+
+        // Let the preview tab trigger a download from its own toolbar
+        window.__detxExport = { download: (format) => { if (parsedData) runExport(format); } };
+
 
         // Handle file selection
         function handleFile(file) {
@@ -1620,8 +3564,12 @@
                 return;
             }
 
-            // Clear any existing filter
-            currentFilter = null;
+            // Clear any existing role selection and search
+            selectedRoles = new Set();
+            searchTerm = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchClear').classList.remove('visible');
+            document.getElementById('searchCount').classList.remove('visible', 'empty');
             document.getElementById('filterIndicator').classList.remove('visible');
 
             currentFileName = file.name;
@@ -1629,6 +3577,9 @@
             fileMeta.textContent = formatFileSize(file.size);
             
             fileInfo.classList.add('visible');
+            summaryCol.classList.add('visible');
+            intakeRow.classList.add('split');
+            workspace.classList.add('split');
             dropZone.classList.add('has-file');
 
             const reader = new FileReader();
@@ -1639,16 +3590,16 @@
                     // Update footer with generator info
                     const gen = parsedData.metadata.generator;
                     document.getElementById('footerText').textContent = 
-                        `Supports CharactR / Cappella DETX${gen ? ' (' + gen + ')' : ''} files • Exports as Excel XLSX`;
+                        `Supports CharactR / Cappella DETX${gen ? ' (' + gen + ')' : ''} files • Exports XLSX, RTF, DOC, TTML & SRT`;
                     
+                    applyDetectedFrameRate(parsedData);
                     showProgramInfo(file.name);
                     generateRolesList(parsedData);
                     generatePreview(parsedData);
+                    searchSection.classList.add('visible');
                     previewSection.classList.add('visible');
-                    convertBtn.classList.add('visible');
-                    
-                    // Reset button state
-                    convertBtn.classList.remove('processing', 'success');
+                    exportSection.classList.add('visible');
+                    applyFormat(currentFormat);
                 } catch (error) {
                     console.error('Error parsing DETX file:', error);
                     alert('Error parsing DETX file. Please ensure it is a valid DETX format.');
@@ -1661,15 +3612,28 @@
         function resetState() {
             parsedData = null;
             currentFileName = '';
-            currentFilter = null;
+            selectedRoles = new Set();
+            searchTerm = '';
+            document.getElementById('searchInput').value = '';
+            document.getElementById('searchClear').classList.remove('visible');
+            document.getElementById('searchCount').classList.remove('visible', 'empty');
+            document.getElementById('fpsHint').classList.remove('visible', 'warn');
+            detectedFps = null;
             fileInput.value = '';
             fileInfo.classList.remove('visible');
+            summaryCol.classList.remove('visible');
+            intakeRow.classList.remove('split');
+            workspace.classList.remove('split');
+            document.getElementById('previewFrame').removeAttribute('srcdoc');
+            document.getElementById('panePreview').classList.add('is-empty');
             dropZone.classList.remove('has-file');
             document.getElementById('programSection').classList.remove('visible');
+            clearProgramPoster();
             document.getElementById('rolesSection').classList.remove('visible');
             document.getElementById('filterIndicator').classList.remove('visible');
+            searchSection.classList.remove('visible');
             previewSection.classList.remove('visible');
-            convertBtn.classList.remove('visible', 'processing', 'success');
+            exportSection.classList.remove('visible');
             previewBody.innerHTML = '';
             document.getElementById('rolesList').innerHTML = '';
         }
@@ -1712,40 +3676,572 @@
 
         document.getElementById('filterClear').addEventListener('click', clearFilter);
 
-        convertBtn.addEventListener('click', () => {
-            if (!parsedData) return;
+        // ============================================================
+        // Preview in a new tab
+        // ============================================================
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
 
-            // Start processing animation
-            convertBtn.classList.add('processing');
+        function columnLetter(index) {
+            let n = index;
+            let out = '';
+            do {
+                out = String.fromCharCode(65 + (n % 26)) + out;
+                n = Math.floor(n / 26) - 1;
+            } while (n >= 0);
+            return out;
+        }
 
-            // Simulate slight delay for better UX
-            setTimeout(() => {
-                try {
-                    const workbook = convertToXLSX(parsedData, currentFileName);
-                    const outputName = currentFileName.replace('.detx', '.xlsx');
-                    
-                    // Create particles
-                    createParticles();
-                    
-                    // Show success state
-                    convertBtn.classList.remove('processing');
-                    convertBtn.classList.add('success');
+        const PREVIEW_CSS = `
+            :root { color-scheme: dark; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0a0a0f; color: #f1f5f9; }
+            .bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center;
+                   justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                   padding: 12px 20px; background: #12121a; border-bottom: 1px solid rgba(99,102,241,0.2); }
+            .bar-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+            .badge { font: 600 11px/1 ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase;
+                     padding: 5px 8px; border-radius: 6px; background: rgba(99,102,241,0.2); color: #a5b4fc;
+                     white-space: nowrap; }
+            .fname { font: 500 14px/1.2 ui-monospace, monospace; color: #cbd5e1;
+                     overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .tabs { display: flex; gap: 6px; flex-wrap: wrap; max-width: 100%; overflow-x: auto; }
+            .tab { font: 600 13px/1 'Segoe UI', system-ui, sans-serif; padding: 8px 14px; cursor: pointer;
+                   color: #94a3b8; background: #1a1a26; border: 1px solid rgba(99,102,241,0.15);
+                   border-radius: 8px; transition: all .15s ease; white-space: nowrap; }
+            .tab:hover { color: #f1f5f9; border-color: rgba(99,102,241,0.5); }
+            .tab.active { color: #fff; background: #4f46e5; border-color: #6366f1; }
+            .bar-right { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+            .meta { font: 400 12px/1 ui-monospace, monospace; color: #64748b; white-space: nowrap; }
+            /* The only export action, so it carries the weight */
+            .dl { display: inline-flex; align-items: center; gap: 9px;
+                  font: 700 15px/1 'Segoe UI', system-ui, sans-serif; padding: 13px 24px;
+                  cursor: pointer; color: #fff;
+                  background: linear-gradient(135deg,#6366f1,#4f46e5); border: none;
+                  border-radius: 11px; white-space: nowrap;
+                  box-shadow: 0 8px 24px rgba(99,102,241,0.45);
+                  transition: transform .15s ease, box-shadow .15s ease, background .2s ease; }
+            .dl svg { width: 17px; height: 17px; stroke: currentColor; fill: none;
+                      stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+            .dl:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(99,102,241,0.6); }
+            .dl:active { transform: translateY(0); }
+            .dl.done { background: linear-gradient(135deg,#10b981,#059669);
+                       box-shadow: 0 8px 24px rgba(16,185,129,0.45); }
+            .dl:disabled { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+            main { padding: 20px; }
+            .sheet { display: none; }
+            .sheet.active { display: block; }
+            .grid-wrap { overflow: auto; max-height: calc(100vh - 150px); border-radius: 10px;
+                         border: 1px solid rgba(99,102,241,0.25); background: #fff; }
+            table.grid { border-collapse: separate; border-spacing: 0; font: 400 12.5px/1.45 'Segoe UI', system-ui, sans-serif; }
+            table.grid th, table.grid td { border-right: 1px solid #d8dbe3; border-bottom: 1px solid #d8dbe3;
+                                           padding: 5px 8px; vertical-align: top; }
+            table.grid thead th { position: sticky; top: 0; z-index: 3; background: #eef0f5; color: #4b5563;
+                                  font: 600 11px/1 ui-monospace, monospace; text-align: center; padding: 7px 8px; }
+            table.grid tbody th.rownum { position: sticky; left: 0; z-index: 2; background: #eef0f5; color: #6b7280;
+                                         font: 400 11px/1 ui-monospace, monospace; text-align: right;
+                                         min-width: 46px; width: 46px; }
+            table.grid thead th.corner { left: 0; z-index: 4; min-width: 46px; width: 46px; }
+            table.grid td { white-space: pre-wrap; word-break: break-word; }
+            td.tcish { font-family: ui-monospace, monospace; font-size: 11.5px; }
+            /* A key, not a control strip - round dots and a caption so the
+               swatches are never mistaken for checkboxes. */
+            .legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px;
+                      margin-bottom: 12px;
+                      font: 400 12px/1 'Segoe UI', system-ui, sans-serif; color: #94a3b8; }
+            .legend-label { font: 600 10px/1 ui-monospace, monospace; letter-spacing: .08em;
+                            text-transform: uppercase; color: #64748b; }
+            .legend-item { display: inline-flex; align-items: center; gap: 7px; }
+            .swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+                      box-shadow: 0 0 0 1px rgba(255,255,255,.2); }
+            /* The workbook fills are pale tints meant for a white sheet, so
+               this variant shows them as cells on white - on the dark bar they
+               all read as the same white. */
+            .legend.legend-cells { background: #f6f7fb; border: 1px solid rgba(255,255,255,.16);
+                                   border-radius: 9px; padding: 9px 13px; color: #475569; }
+            .legend.legend-cells .legend-label { color: #6b7280; }
+            .legend.legend-cells .swatch { width: 24px; height: 14px; border-radius: 2px;
+                                           border: 1px solid #aab2c2; box-shadow: none; }
+            .note { margin-top: 12px; font: 400 12px/1.5 'Segoe UI', system-ui, sans-serif; color: #64748b; }
+            .code-wrap { overflow: auto; max-height: calc(100vh - 150px); border-radius: 10px;
+                         border: 1px solid rgba(99,102,241,0.25); background: #0f0f18; }
+            table.code { border-collapse: collapse; width: 100%;
+                         font: 400 12.5px/1.6 ui-monospace, 'JetBrains Mono', monospace; }
+            table.code td.ln { position: sticky; left: 0; width: 1%; padding: 0 14px 0 12px; text-align: right;
+                               color: #475569; background: #0f0f18; user-select: none; white-space: nowrap;
+                               border-right: 1px solid rgba(99,102,241,0.15); }
+            table.code td.src { padding: 0 16px; white-space: pre-wrap; word-break: break-word; color: #cbd5e1; }
+            /* TTML blocks, tinted so head / styling / layout / cues separate
+               at a glance. Declared before :hover so hover still wins. */
+            table.code tr.sec td.src { border-left: 3px solid transparent; padding-left: 13px; }
+            table.code tr.sec-doc td.src { border-left-color: rgba(148,163,184,0.35); }
+            table.code tr.sec-head td.src { background: rgba(56,189,248,0.07); border-left-color: rgba(56,189,248,0.55); }
+            table.code tr.sec-styling td.src { background: rgba(167,139,250,0.08); border-left-color: rgba(167,139,250,0.55); }
+            table.code tr.sec-layout td.src { background: rgba(52,211,153,0.07); border-left-color: rgba(52,211,153,0.55); }
+            table.code tr.sec-body td.src { background: rgba(244,114,182,0.05); border-left-color: rgba(244,114,182,0.5); }
+            table.code tr:hover td.src { background: rgba(99,102,241,0.12); }
+            .tok-tag { color: #7dd3fc; }
+            .tok-tc { color: #34d399; }
+            .tok-idx { color: #fbbf24; }
+            .tok-ctrl { color: #818cf8; }
+            /* TTML tokens */
+            .tok-decl { color: #64748b; font-style: italic; }
+            .tok-punct { color: #64748b; }
+            .tok-el { color: #7dd3fc; }
+            .tok-el-cue { color: #f0abfc; }
+            .tok-el-meta { color: #fbbf24; }
+            .tok-el-style { color: #a78bfa; }
+            .tok-attr { color: #a5b4fc; }
+            .tok-val { color: #86efac; }
+            .tok-time { color: #fde68a; font-weight: 600; }
+            .tok-text { color: #f8fafc; }
+            .doc-page { max-width: 21cm; margin: 0 auto; padding: 2cm; background: #fff; color: #000;
+                        border-radius: 6px; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+            .doc-page br[clear] { display: block; height: 24px; border-top: 1px dashed #bbb; margin: 24px 0; }
+        `;
 
-                    // Download file
-                    XLSX.writeFile(workbook, outputName);
+        function previewShell(titleText, fileLabel, formatLabel, tabsHtml, rightHtml, bodyHtml, scriptHtml) {
+            return '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+                '<title>' + escapeHtml(titleText) + '</title><style>' + PREVIEW_CSS + '</style></head><body>' +
+                '<header class="bar">' +
+                '<div class="bar-left"><span class="badge">' + escapeHtml(formatLabel) + '</span>' +
+                '<span class="fname">' + escapeHtml(fileLabel) + '</span></div>' +
+                (tabsHtml ? '<div class="tabs">' + tabsHtml + '</div>' : '') +
+                '<div class="bar-right">' + rightHtml + '</div>' +
+                '</header><main>' + bodyHtml + '</main>' +
+                '<script>' + scriptHtml + '<\/script></body></html>';
+        }
 
-                    // Reset button after delay
-                    setTimeout(() => {
-                        convertBtn.classList.remove('success');
-                    }, 2500);
+        const PREVIEW_DL_ICON =
+            '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+            '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>' +
+            '<polyline points="7 10 12 15 17 10"/>' +
+            '<line x1="12" y1="15" x2="12" y2="3"/></svg>';
 
-                } catch (error) {
-                    console.error('Error converting file:', error);
-                    convertBtn.classList.remove('processing');
-                    alert('Error converting file. Please try again.');
+        const PREVIEW_TAB_SCRIPT =
+            "document.querySelectorAll('.tab').forEach(function(t){" +
+            "t.addEventListener('click',function(){" +
+            "document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});" +
+            "document.querySelectorAll('.sheet').forEach(function(x){x.classList.remove('active');});" +
+            "t.classList.add('active');" +
+            "document.getElementById('sheet-'+t.dataset.sheet).classList.add('active');});});";
+
+        // The preview runs either in a popup (window.opener) or in the
+        // panel's iframe (window.parent); use whichever host is present.
+        function previewDownloadScript(format) {
+            return "var host=(window.opener&&window.opener.__detxExport)?window.opener:" +
+                "((window.parent!==window&&window.parent.__detxExport)?window.parent:null);" +
+                "var dl=document.getElementById('dl');" +
+                "if(!host){dl.disabled=true;dl.textContent='Converter tab closed';}" +
+                "else{var mark=dl.innerHTML;dl.addEventListener('click',function(){" +
+                "host.__detxExport.download('" + format + "');" +
+                "dl.classList.add('done');dl.innerHTML=mark.replace(/Download[^<]*/,'Downloaded');" +
+                "setTimeout(function(){dl.classList.remove('done');dl.innerHTML=mark;},2000);});}";
+        }
+
+        // Spreadsheet-style preview of the workbook that would be written
+        function buildSheetPreviewHTML(specs, filename) {
+            const renderGrid = (spec) => {
+                const widths = spec.colWidths;
+                const cols = widths.length;
+                let html = '<div class="grid-wrap"><table class="grid"><thead><tr><th class="corner"></th>';
+                for (let c = 0; c < cols; c++) {
+                    html += '<th style="min-width:' + Math.round(widths[c] * 7.5) +
+                            'px;max-width:' + Math.round(widths[c] * 7.5) + 'px">' + columnLetter(c) + '</th>';
                 }
-            }, 800);
+                html += '</tr></thead><tbody>';
+                spec.rows.forEach((row, r) => {
+                    html += '<tr><th class="rownum">' + (r + 1) + '</th>';
+                    for (let c = 0; c < cols; c++) {
+                        const isTc = r > 0 && cols === 7 && (c === 0 || c === 1);
+                        html += '<td class="' + (isTc ? 'tcish' : '') + '" style="' +
+                                toCssStyle(spec.styleFor(r, c)) + '">' +
+                                escapeHtml(row[c] == null ? '' : row[c]) + '</td>';
+                    }
+                    html += '</tr>';
+                });
+                return html + '</tbody></table></div>';
+            };
+
+            const legend =
+                '<div class="legend legend-cells">' +
+                '<span class="legend-label">Cell colours</span>' +
+                '<span class="legend-item"><i class="swatch" style="background:#4F46E5"></i>Header</span>' +
+                '<span class="legend-item"><i class="swatch" style="background:#F5F3FF"></i>Metadata</span>' +
+                '<span class="legend-item"><i class="swatch" style="background:#F0FDFA"></i>Roles</span>' +
+                '<span class="legend-item"><i class="swatch" style="background:#EDE9FE"></i>Cells to fill in</span>' +
+                '</div>';
+
+            const note = '<p class="note">Rendered from the exact workbook model used for the export &mdash; ' +
+                'sheets, fills, column widths and column order match the .xlsx. Long cells wrap here for ' +
+                'readability; Excel shows them on a single line.</p>';
+
+            let tabs = '';
+            let body = '';
+            specs.forEach((spec, i) => {
+                tabs += '<button class="tab' + (i === 0 ? ' active' : '') + '" data-sheet="' + i + '">' +
+                        escapeHtml(spec.name) + '</button>';
+                body += '<div class="sheet' + (i === 0 ? ' active' : '') + '" id="sheet-' + i + '">' +
+                        (i === 0 ? legend : '') + renderGrid(spec) + (i === 0 ? note : '') + '</div>';
+            });
+
+            const totalRows = specs.reduce((sum, s) => sum + s.rows.length, 0);
+            const right =
+                '<span class="meta">' + specs.length + ' sheet' + (specs.length === 1 ? '' : 's') +
+                ' &middot; ' + totalRows + ' rows</span>' +
+                '<button class="dl" id="dl">' + PREVIEW_DL_ICON + 'Download .xlsx</button>';
+
+            return previewShell('Preview - ' + outputName('xlsx'), outputName('xlsx'), 'XLSX',
+                                tabs, right, body, PREVIEW_TAB_SCRIPT + previewDownloadScript('xlsx'));
+        }
+
+        // ---- TTML syntax colouring -------------------------------------
+        function ttmlElementClass(name) {
+            if (name.indexOf('ttm:') === 0) return 'tok-el-meta';
+            if (/^(p|span|br)$/.test(name)) return 'tok-el-cue';
+            if (/^(style|region)$/.test(name)) return 'tok-el-style';
+            return 'tok-el';
+        }
+
+        function ttmlTag(tag) {
+            if (tag.indexOf('<?') === 0 || tag.indexOf('<!') === 0) {
+                return '<span class="tok-decl">' + escapeHtml(tag) + '</span>';
+            }
+
+            const head = tag.match(/^<\/?([A-Za-z_][-\w:.]*)/);
+            if (!head) return escapeHtml(tag);
+
+            const closing = tag.charAt(1) === '/';
+            let out = '<span class="tok-punct">&lt;' + (closing ? '/' : '') + '</span>' +
+                      '<span class="' + ttmlElementClass(head[1]) + '">' + escapeHtml(head[1]) + '</span>';
+
+            // everything between the element name and the closing bracket
+            const rest = tag.slice(head[0].length, tag.length - 1);
+            const attrRe = /([A-Za-z_][-\w:.]*)\s*=\s*"([^"]*)"/g;
+            let last = 0;
+            let m;
+            while ((m = attrRe.exec(rest)) !== null) {
+                out += escapeHtml(rest.slice(last, m.index));
+                const valueClass = /^(begin|end|dur)$/.test(m[1]) ? 'tok-time' : 'tok-val';
+                out += '<span class="tok-attr">' + escapeHtml(m[1]) + '</span>' +
+                       '<span class="tok-punct">=</span>' +
+                       '<span class="' + valueClass + '">&quot;' + escapeHtml(m[2]) + '&quot;</span>';
+                last = m.index + m[0].length;
+            }
+            out += '<span class="tok-punct">' + escapeHtml(rest.slice(last)) + '</span>';
+
+            return out + '<span class="tok-punct">&gt;</span>';
+        }
+
+        function highlightTtml(raw) {
+            let out = '';
+            let i = 0;
+            while (i < raw.length) {
+                const lt = raw.indexOf('<', i);
+                if (lt === -1) break;
+                if (lt > i) {
+                    const text = raw.slice(i, lt);
+                    out += text.trim()
+                        ? '<span class="tok-text">' + escapeHtml(text) + '</span>'
+                        : escapeHtml(text);
+                }
+                const gt = raw.indexOf('>', lt);
+                if (gt === -1) { out += escapeHtml(raw.slice(lt)); return out; }
+                out += ttmlTag(raw.slice(lt, gt + 1));
+                i = gt + 1;
+            }
+            if (i < raw.length) {
+                const tail = raw.slice(i);
+                out += tail.trim() ? '<span class="tok-text">' + escapeHtml(tail) + '</span>' : escapeHtml(tail);
+            }
+            return out;
+        }
+
+        // Which structural block each line belongs to, for the row tint
+        function ttmlSections(lines) {
+            const sections = [];
+            let current = 'doc';
+            lines.forEach(line => {
+                const t = line.trim();
+                if (/^<styling\b/.test(t)) { current = 'styling'; sections.push('styling'); return; }
+                if (/^<\/styling>/.test(t)) { sections.push('styling'); current = 'head'; return; }
+                if (/^<layout\b/.test(t)) { current = 'layout'; sections.push('layout'); return; }
+                if (/^<\/layout>/.test(t)) { sections.push('layout'); current = 'head'; return; }
+                if (/^<head\b/.test(t)) { current = 'head'; sections.push('head'); return; }
+                if (/^<\/head>/.test(t)) { sections.push('head'); current = 'doc'; return; }
+                if (/^<body\b/.test(t)) { current = 'body'; sections.push('body'); return; }
+                if (/^<\/body>/.test(t)) { sections.push('body'); current = 'doc'; return; }
+                sections.push(current);
+            });
+            return sections;
+        }
+
+        function highlightExport(raw, format) {
+            if (format === 'ttml-ez' || format === 'ttml-yd') return highlightTtml(raw);
+
+            const escaped = escapeHtml(raw);
+            if (format === 'doc') {
+                return escaped.replace(/&lt;[^\n]*?&gt;/g, m => '<span class="tok-tag">' + m + '</span>');
+            }
+            if (format === 'srt') {
+                return escaped
+                    .replace(/^\d{2}:\d{2}:\d{2},\d{3} --&gt; \d{2}:\d{2}:\d{2},\d{3}$/gm,
+                             m => '<span class="tok-tc">' + m + '</span>')
+                    .replace(/^\d+$/gm, m => '<span class="tok-idx">' + m + '</span>');
+            }
+
+            if (format === 'rtf') {
+                return escaped.replace(/\\[a-zA-Z]+-?\d*/g, m => '<span class="tok-ctrl">' + m + '</span>');
+            }
+            return escaped;
+        }
+
+        // Source preview for the text-based formats
+        function buildTextPreviewHTML(text, format) {
+            const info = FORMAT_INFO[format];
+            const name = outputName(format);
+            const lines = text.split('\n');
+            const isTtml = format === 'ttml-ez' || format === 'ttml-yd';
+            const sections = isTtml ? ttmlSections(lines) : null;
+
+            const legend = isTtml
+                ? '<div class="legend">' +
+                  '<span class="legend-label">Blocks</span>' +
+                  '<span class="legend-item"><i class="swatch" style="background:#38bdf8"></i>head</span>' +
+                  '<span class="legend-item"><i class="swatch" style="background:#a78bfa"></i>styling</span>' +
+                  '<span class="legend-item"><i class="swatch" style="background:#34d399"></i>layout</span>' +
+                  '<span class="legend-item"><i class="swatch" style="background:#f472b6"></i>body / cues</span>' +
+                  '<span class="legend-item"><i class="swatch" style="background:#fde68a"></i>timecodes</span>' +
+                  '</div>'
+                : '';
+
+            let body = legend + '<div class="code-wrap"><table class="code"><tbody>';
+            lines.forEach((line, i) => {
+                const rowClass = sections ? ' class="sec sec-' + sections[i] + '"' : '';
+                body += '<tr' + rowClass + '><td class="ln">' + (i + 1) + '</td><td class="src">' +
+                        (highlightExport(line, format) || '&nbsp;') + '</td></tr>';
+            });
+            body += '</tbody></table></div>';
+
+            const right =
+                '<span class="meta">' + lines.length + ' lines &middot; ' +
+                (new Blob([text]).size / 1024).toFixed(1) + ' KB</span>' +
+                '<button class="dl" id="dl">' + PREVIEW_DL_ICON + 'Download .' + info.ext + '</button>';
+
+            return previewShell('Preview - ' + name, name, info.label, '', right,
+                                '<div class="sheet active">' + body + '</div>',
+                                previewDownloadScript(format));
+        }
+
+        // DOC and RTF are the same script in two encodings, so both get the
+        // laid-out page plus their own source. Raw RTF control words are
+        // unreadable on their own.
+        function buildDocumentPreviewHTML(parts, source, format) {
+            const info = FORMAT_INFO[format];
+            const name = outputName(format);
+
+            const note = format === 'rtf'
+                ? '<p class="note">Rendered from the same content the .rtf carries &mdash; ' +
+                  'cover, role table and script in the same order. Word applies its own ' +
+                  'pagination when it opens the file; the Source tab is the actual RTF.</p>'
+                : '';
+
+            const rendered = '<div class="sheet active" id="sheet-0">' +
+                '<style>' + docStyles('.doc-page') + '</style>' +
+                '<div class="doc-page">' + parts.body + '</div>' + note + '</div>';
+
+            const sourceLines = source.split('\n');
+            let code = '<div class="sheet" id="sheet-1"><div class="code-wrap"><table class="code"><tbody>';
+            sourceLines.forEach((line, i) => {
+                code += '<tr><td class="ln">' + (i + 1) + '</td><td class="src">' +
+                        (highlightExport(line, format) || '&nbsp;') + '</td></tr>';
+            });
+            code += '</tbody></table></div></div>';
+
+            const tabs = '<button class="tab active" data-sheet="0">Document</button>' +
+                         '<button class="tab" data-sheet="1">Source</button>';
+
+            const right =
+                '<span class="meta">' + sourceLines.length + ' lines &middot; ' +
+                (new Blob([source]).size / 1024).toFixed(1) + ' KB</span>' +
+                '<button class="dl" id="dl">' + PREVIEW_DL_ICON + 'Download .' + info.ext + '</button>';
+
+            return previewShell('Preview - ' + name, name, info.label, tabs, right,
+                                rendered + code,
+                                PREVIEW_TAB_SCRIPT + previewDownloadScript(format));
+        }
+
+        function buildPreviewDocument() {
+            if (currentFormat === 'xlsx') {
+                return buildSheetPreviewHTML(
+                    buildWorkbookSpecs(scopedData(parsedData), currentFileName, currentOptions()),
+                    currentFileName);
+            }
+            if (currentFormat === 'doc' || currentFormat === 'rtf') {
+                const opts = currentOptions();
+                const data = scopedData(parsedData);
+                const source = currentFormat === 'doc'
+                    ? buildDOC(data, opts, currentFileName)
+                    : buildRTF(data, opts, currentFileName);
+                return buildDocumentPreviewHTML(
+                    buildDocParts(data, opts, currentFileName), source, currentFormat);
+            }
+            return buildTextPreviewHTML(buildTextExport(currentFormat), currentFormat);
+        }
+
+        // Preview tab of the side panel
+        function renderInlinePreview() {
+            const pane = document.getElementById('panePreview');
+            const frame = document.getElementById('previewFrame');
+            const empty = document.getElementById('panelEmpty');
+
+            if (!parsedData) {
+                empty.textContent = 'Load a DETX file to see a preview.';
+                pane.classList.add('is-empty');
+                return;
+            }
+
+            try {
+                frame.srcdoc = buildPreviewDocument();
+                pane.classList.remove('is-empty');
+            } catch (error) {
+                console.error('Error building preview:', error);
+                empty.textContent = 'Could not build the preview for this format.';
+                pane.classList.add('is-empty');
+            }
+        }
+
+        // The preview is always on screen, so every change repaints it
+        function refreshInlinePreview() {
+            if (parsedData) renderInlinePreview();
+        }
+
+        // The same preview, opened as a standalone browser tab
+        function openPreviewWindow() {
+            if (!parsedData) return;
+            const win = window.open('', '_blank');
+            if (!win) {
+                alert('The preview opens in a new tab - please allow pop-ups for this page.');
+                return;
+            }
+
+            let html;
+            try {
+                html = buildPreviewDocument();
+            } catch (error) {
+                console.error('Error building preview:', error);
+                win.close();
+                alert('Error building the preview. Please try again.');
+                return;
+            }
+
+            win.document.open();
+            win.document.write(html);
+            win.document.close();
+        }
+
+        // ============================================================
+        // Format selection
+        // ============================================================
+        let currentFormat = 'xlsx';
+
+        const FORMAT_OPTIONS_SHOWN = {
+            xlsx:      ['optSheets'],
+            rtf:       ['optFps'],
+            doc:       ['optFps'],
+            'ttml-ez': ['optFps', 'optLang', 'optNames'],
+            'ttml-yd': ['optFps', 'optLang'],
+            srt:       ['optFps', 'optOffset', 'optNames']
+        };
+
+        function applyFormat(format) {
+            currentFormat = format;
+            const info = FORMAT_INFO[format];
+
+            document.querySelectorAll('.format-card').forEach(card => {
+                card.classList.toggle('active', card.dataset.format === format);
+            });
+
+            // The per-role sheet choice only makes sense with several roles
+            const roleCount = parsedData ? scopedRoleNames(parsedData).length : 0;
+            const shown = FORMAT_OPTIONS_SHOWN[format].filter(id => id !== 'optSheets' || roleCount > 1);
+
+            ['optFps', 'optOffset', 'optLang', 'optNames', 'optSheets'].forEach(id => {
+                document.getElementById(id).classList.toggle('visible', shown.includes(id));
+            });
+            document.getElementById('formatOptions').classList.toggle('visible', shown.length > 0);
+
+            document.getElementById('exportHint').textContent = info.desc;
+            document.getElementById('previewFormatLabel').textContent = info.label;
+
+            updateExportScope();
+            refreshInlinePreview();
+        }
+
+        // What the next export will actually contain
+        function updateExportScope() {
+            const el = document.getElementById('exportScope');
+            if (!el) return;
+
+            if (!parsedData) {
+                el.innerHTML = '';
+                return;
+            }
+
+            const total = allRoleNames(parsedData).length;
+            const picked = scopedRoleNames(parsedData);
+            const lineTotal = scopedLines(parsedData).filter(l => (l.original || '').trim()).length;
+
+            if (selectedRoles.size === 0) {
+                el.innerHTML =
+                    '<span class="scope-pill scope-all">All ' + total + ' roles</span>' +
+                    '<span class="scope-detail">' + lineTotal + ' lines &middot; ' +
+                    'click roles above to export only those</span>';
+            } else {
+                const names = picked.slice(0, 4).map(escapeHtml).join(', ') +
+                              (picked.length > 4 ? ' +' + (picked.length - 4) + ' more' : '');
+                el.innerHTML =
+                    '<span class="scope-pill">' + picked.length + ' of ' + total + ' roles</span>' +
+                    '<span class="scope-detail">' + lineTotal + ' lines &middot; ' + names + '</span>';
+            }
+        }
+
+        document.querySelectorAll('.format-card').forEach(card => {
+            card.addEventListener('click', () => applyFormat(card.dataset.format));
         });
+
+        ['fpsSelect', 'offsetSelect', 'langInput', 'namesCheck', 'sheetsSelect'].forEach(id => {
+            const control = document.getElementById(id);
+            control.addEventListener('change', () => {
+                if (id === 'fpsSelect') refreshFrameRateHint();
+                updateExportScope();
+                refreshInlinePreview();
+            });
+            if (control.tagName === 'INPUT' && control.type === 'text') {
+                control.addEventListener('input', refreshInlinePreview);
+            }
+        });
+
+        document.getElementById('panelPopOut').addEventListener('click', openPreviewWindow);
+        document.getElementById('rolesSelectAll').addEventListener('click', selectAllRoles);
+        document.getElementById('rolesClear').addEventListener('click', clearFilter);
+
+        const searchInput = document.getElementById('searchInput');
+        searchInput.addEventListener('input', (e) => setSearchTerm(e.target.value));
+        document.getElementById('searchClear').addEventListener('click', () => {
+            searchInput.value = '';
+            setSearchTerm('');
+            searchInput.focus();
+        });
+
+        applyFormat('xlsx');
+
 
         // Prevent default drag behaviors on document
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {

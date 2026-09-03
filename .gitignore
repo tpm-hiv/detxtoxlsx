@@ -1,0 +1,6 @@
+# Working snapshots - these still contain the old hard-coded TMDB key,
+# so they must never reach a repository or a deploy.
+*.bak
+
+node_modules/
+.netlify/

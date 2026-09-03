@@ -1,0 +1,7 @@
+# Only index.html is published. The working folder also holds index.v*.bak
+# snapshots, and publishing the root directory would put every one of them
+# online at a guessable URL.
+[build]
+  command = "mkdir -p public && cp index.html public/"
+  publish = "public"
+  functions = "netlify/functions"
